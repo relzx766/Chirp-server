@@ -1,0 +1,101 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: api-gateway
+  main:
+    web-application-type: reactive
+  cloud:
+    nacos:
+      server-addr: 192.168.145.1:8848
+    gateway:
+      httpclient:
+        websocket:
+          max-frame-payload-length: 16777216
+      routes:
+        - id: auth-server
+          uri: lb://auth-server
+          predicates:
+            - Path=/auth-service/**
+          filters:
+            - StripPrefix=1
+        - id: chirper-server
+          uri: lb://chirper-server
+          predicates:
+            - Path=/chirper-service/**
+          filters:
+            - StripPrefix=1
+
+        - id: user-server
+          uri: lb://user-server
+          predicates:
+            - Path=/user-service/**
+          filters:
+            - StripPrefix=1
+        - id: advice-server
+          uri: lb:ws://advice-server
+          predicates:
+            - Path=/advice-service/interaction/**
+          filters:
+            - StripPrefix=1
+            - WebsocketFilterFactory
+        - id: media-server
+          uri: lb://media-server
+          predicates:
+            - Path=/media-service/**
+          filters:
+            - StripPrefix=1
+
+  config:
+    import:
+      - optional:nacos:apiGateway-dev.yml
+      - optional:nacos:datasource-config.yml?group=COMMON_GROUP
+      - optional:nacos:redis-config.yml?group=COMMON_GROUP
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/db_chirp?userUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
+    druid:
+      initial-size: 2
+      max-active: 8
+      min-idle: 1
+      max-wait: 6000
+      stat-view-servlet:
+        enabled: true
+        login-username: zyq
+        login-password: 123
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: '*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*'
+      db-type: mysql
+
+  data:
+    redis:
+      database: 0
+      host: localhost
+      port: 6379
+      password:
+      timeout: 6000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+sa-token:
+  token-name: Authorization
+default-config:
+  auth:
+    exclude:
+      paths:
+        - /chirper-service/chirper/detail/**
+        - /chirper-service/chirper/page/**
+        - /user-service/user/short
+        - /advice-service/interaction/**
+        - /user-service/user/profile/**
+        - /chirper-service/chirper/author/**

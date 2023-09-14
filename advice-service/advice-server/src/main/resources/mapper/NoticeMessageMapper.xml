@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zyq.chirp.adviceserver.mapper.NoticeMessageMapper">
+    <resultMap id="noticeMessageMap" type="com.zyq.chirp.adviceserver.domain.vo.InteractionMessageVo">
+        <id property="id" column="id"/>
+        <result property="senderId" column="sender_id"/>
+        <result property="chirperId" column="chirper_id"/>
+        <result property="receiverId" column="receiver_id"/>
+        <result property="senderAvatar" column="avatar"/>
+        <result property="senderUsername" column="username"/>
+        <result property="text" column="text"/>
+        <result property="type" column="type"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <insert id="insertBatch">
+        replace into tb_site_message(id, sender_id, receiver_id,
+        chirper_id, type, create_time, is_read)
+        values
+
+        <foreach collection="messages" item="message" separator=",">
+            ( #{message.id},
+            #{message.senderId},
+            #{message.receiverId},
+            #{message.chirperId},
+            #{message.type} ,
+            #{message.createTime} ,
+            #{message.isRead} )
+        </foreach>
+    </insert>
+
+    <select id="getByReceiverId" resultType="com.zyq.chirp.adviceserver.domain.pojo.InteractionMessage">
+        select id,
+               sender_id,
+               receiver_id,
+               chirper_id,
+               type,
+               create_time
+        from tb_site_message tsm
+
+        where tsm.receiver_id = #{id}
+        order by create_time desc
+    </select>
+
+    <select id="getUnReadByReceiverId" resultType="com.zyq.chirp.adviceserver.domain.pojo.InteractionMessage">
+        select id,
+               sender_id,
+               receiver_id,
+               chirper_id,
+               type,
+               create_time
+        from tb_site_message
+        where receiver_id = #{id}
+          and is_read = 0
+        order by create_time desc
+    </select>
+
+    <insert id="insertOne">
+        insert into tb_site_message(id, sender_id, receiver_id, chirper_id, type, create_time, is_read)
+        SELECT temp.id, s_id, tc.author_id, c_id, tp, c_t, i_r
+        from (select #{id}         as id,
+                     #{senderId}   as s_id,
+                     #{chirperId}  as c_id,
+                     #{type}       as tp,
+                     #{createTime} as c_t,
+                     #{isRead}     as i_r) temp
+                 join tb_chirper tc on temp.c_id = tc.id
+    </insert>
+</mapper>

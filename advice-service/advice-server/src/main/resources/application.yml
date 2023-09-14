@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: advice-server
+  #nacos
+  cloud:
+    nacos:
+      server-addr: 192.168.145.1:8848
+  config:
+    import:
+      - optional:nacos:adviceServer-dev.yml
+      - optional:nacos:datasource-config.yml?group=COMMON_GROUP
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: advice_consumer_group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.zyq.chirp.adviceserver.domain,com.zyq.chirp.chirpclient.dto,com.zyq.chirp.userclient.dto,com.zyq.chirp.adviceclient.dto
+    producer:
+      # 发生错误后，消息重发的次数。
+      retries: 0
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      #只要集群的首领节点收到消息，生产者就会收到一个来自服务器成功响应。
+      acks: 1
+    listener:
+      #主题不存在时是否停止运行
+      missing-topics-fatal: false
+      ack-mode: manual
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/db_chirp?userUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
+    druid:
+      initial-size: 2
+      max-active: 8
+      min-idle: 1
+      max-wait: 6000
+      stat-view-servlet:
+        enabled: true
+        login-username: zyq
+        login-password: 123
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: '*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*'
+      db-type: mysql
+
+  data:
+    redis:
+      database: 0
+      host: localhost
+      port: 6379
+      password:
+      timeout: 6000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+mq:
+  consumer:
+    group:
+      pre-interaction: advice_pre_interaction_consumer
+      interaction: advice_interaction_consumer
+  topic:
+    chirper-delay-post: chirper-delay-post
+    site-message:
+      follow: FOLLOW
+      like: LIKE
+      forward: FORWARD
+      quote: QUOTE
+      reply: REPLY
+      interaction: interaction
+server:
+  port: 8084
+
+

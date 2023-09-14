@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zyq.chirp.chirperserver.mapper.LikeMapper">
+    <insert id="insertList">
+        replace into tb_chirper_like(chirper_id, user_id, create_time)
+        select temp1.c_id,temp1.u_id,temp1.c_time
+        from
+        (
+        <foreach collection="list" item="item" separator="union all">
+            select #{item.chirperId} as c_id,#{item.userId} as u_id,#{item.createTime} as c_time
+        </foreach>
+        )as temp1
+        join tb_chirper tc on tc.id=temp1.c_id join tb_user tu on tu.id=temp1.u_id
+    </insert>
+
+    <delete id="deleteList">
+        delete
+        from tb_chirper_like
+        where (chirper_id, user_id) in
+        (
+        <foreach collection="list" item="item" separator=",">
+            (#{item.chirperId}, #{item.userId})
+        </foreach>
+        )
+    </delete>
+
+    <update id="updateChirperLikeCount">
+        update tb_chirper
+        set like_count=like_count + #{delta}
+        where id = #{chirpreId}
+    </update>
+</mapper>

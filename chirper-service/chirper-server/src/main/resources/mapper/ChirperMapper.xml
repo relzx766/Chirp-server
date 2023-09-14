@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zyq.chirp.chirperserver.mapper.ChirperMapper">
+    <resultMap id="chirperVoResultMap" type="com.zyq.chirp.chirperserver.domain.vo.ChirperVo">
+        <result column="id" property="id"/>
+        <result column="author_id" property="authorId"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="in_reply_to_user_id" property="inReplyToUserId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="text" property="text"/>
+        <result column="type" property="type"/>
+        <result column="referenced_chirper_id" property="referencedChirperId"/>
+        <result column="media_keys" property="mediaKeys"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="reply_count" property="replyCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="quote_count" property="quoteCount"/>
+        <result column="forward_count" property="forwardCount"/>
+        <result column="status" property="status"/>
+        <result column="is_like" property="isLike"/>
+        <result column="is_forward" property="isForward"/>
+        <result column="is_quote" property="isQuote"/>
+    </resultMap>
+    <select id="getById" resultMap="chirperVoResultMap">
+        select tc1.id,
+        tc1.author_id,
+        tc1.conversation_id,
+        tc1.in_reply_to_user_id,
+        tc1.create_time,
+        tc1.`text`,
+        tc1.`type`,
+        tc1.referenced_chirper_id,
+        tc1.media_keys,
+        tc1.view_count,
+        tc1.reply_count,
+        tc1.like_count,
+        tc1.quote_count,
+        tc1.forward_count,
+        tc1.`status`
+        <if test="userId != null">
+            ,sum(if(tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and tc2.type = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@FORWARD}',
+            true,
+            false)) is_forward,
+            sum(if(
+            tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and
+            tc2.type ='${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE}',
+            true,
+            false)) is_quote,
+            if(tcl.chirper_id is not null,true, false) is_like
+        </if>
+
+        from tb_chirper as tc1
+        <if test="userId != null">
+            left join tb_chirper_like tcl on tcl.chirper_id=tc1.id and tcl.user_id=#{userId}
+            left join tb_chirper tc2 on tc2.referenced_chirper_id=tc1.id and tc2.author_id=#{userId}
+        </if>
+        where tc1.id = #{chirperId}
+        and tc1.status = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+    </select>
+
+    <resultMap id="ChirperResultMap" type="com.zyq.chirp.chirperserver.domain.pojo.Chirper">
+        <!--@mbg.generated-->
+        <id column="tb_chirper_id" property="id"/>
+        <result column="tb_chirper_author_id" property="authorId"/>
+        <result column="tb_chirper_conversation_id" property="conversationId"/>
+        <result column="tb_chirper_in_reply_to_user_id" property="inReplyToUserId"/>
+        <result column="in_reply_to_chirper_id" property="inReplyToChirperId"/>
+        <result column="tb_chirper_create_time" property="createTime"/>
+        <result column="tb_chirper_text" property="text"/>
+        <result column="tb_chirper_type" property="type"/>
+        <result column="tb_chirper_referenced_chirper_id" property="referencedChirperId"/>
+        <result column="tb_chirper_media_keys" property="mediaKeys"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <result column="tb_chirper_view_count" property="viewCount"/>
+        <result column="tb_chirper_like_count" property="likeCount"/>
+        <result column="tb_chirper_forward_count" property="forwardCount"/>
+        <result column="tb_chirper_quote_count" property="quoteCount"/>
+        <result column="tb_chirper_reply_count" property="replyCount"/>
+        <result column="tb_chirper_status" property="status"/>
+    </resultMap>
+
+    <select id="getMatchLimit" resultMap="chirperVoResultMap">
+        select tc1.id,
+        tc1.author_id,
+        tc1.conversation_id,
+        tc1.in_reply_to_user_id,
+        tc1.create_time,
+        tc1.`text`,
+        tc1.`type`,
+        tc1.referenced_chirper_id,
+        tc1.media_keys,
+        tc1.view_count,
+        tc1.reply_count,
+        tc1.like_count,
+        tc1.quote_count,
+        tc1.forward_count,
+        tc1.`status`
+        <if test="userId != null">
+            , case when
+            max(if(tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and tc2.type = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@FORWARD}',
+            true,
+            false)) = 0 then false else true end is_forward,
+            case when max(if(
+            tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and
+            tc2.type ='${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE}',
+            true,
+            false)) = 0 then false else true end is_quote,
+            if(tcl.chirper_id is not null,true, false) is_like
+        </if>
+        from tb_chirper as tc1
+        <if test="userId != null">
+            left join tb_chirper_like tcl on tcl.chirper_id=tc1.id and tcl.user_id=#{userId}
+            left join tb_chirper tc2 on tc2.referenced_chirper_id=tc1.id and tc2.author_id=#{userId}
+        </if>
+        where match(tc1.text) against(#{keyword})
+        and tc1.status ='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+        <if test="isMedia != null and isMedia">
+            and tc1.media_keys is not null
+        </if>
+        <if test="userId != null">
+            group by tc1.id,tc1.create_time
+        </if>
+        order by tc1.create_time desc
+        limit #{offset},#{size}
+    </select>
+
+    <select id="getChildrenChirperLimit" resultMap="chirperVoResultMap">
+        select tc1.id,
+        tc1.author_id,
+        tc1.conversation_id,
+        tc1.in_reply_to_user_id,
+        tc1.create_time,
+        tc1.`text`,
+        tc1.`type`,
+        tc1.referenced_chirper_id,
+        tc1.media_keys,
+        tc1.view_count,
+        tc1.reply_count,
+        tc1.like_count,
+        tc1.quote_count,
+        tc1.forward_count,
+        tc1.`status`
+        <if test="userId != null">
+            , case when
+            max(if(tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and tc2.type = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@FORWARD}',
+            true,
+            false)) = 0 then false else true end is_forward,
+            case when max(if(
+            tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and
+            tc2.type ='${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE}',
+            true,
+            false)) = 0 then false else true end is_quote,
+            if(tcl.chirper_id is not null,true, false) is_like
+        </if>
+        from tb_chirper as tc1
+        <if test="userId != null">
+            left join tb_chirper_like tcl on tcl.chirper_id=tc1.id and tcl.user_id=#{userId}
+            left join tb_chirper tc2 on tc2.referenced_chirper_id=tc1.id and tc2.author_id=#{userId}
+        </if>
+        where tc1.in_reply_to_chirper_id=#{parentChirperId}
+        and tc1.status = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+        <if test="userId != null">
+            group by tc1.id,
+            tc1.create_time
+        </if>
+        order by tc1.create_time desc
+        limit #{offset},#{size}
+    </select>
+
+    <select id="getByAuthorLimit" resultMap="chirperVoResultMap">
+        select tc1.id,
+        tc1.author_id,
+        tc1.conversation_id,
+        tc1.in_reply_to_user_id,
+        tc1.create_time,
+        tc1.`text`,
+        tc1.`type`,
+        tc1.referenced_chirper_id,
+        tc1.media_keys,
+        tc1.view_count,
+        tc1.reply_count,
+        tc1.like_count,
+        tc1.quote_count,
+        tc1.forward_count,
+        tc1.`status`
+        <if test="userId != null">
+            , case when
+            max(if(tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and tc2.type = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@FORWARD}',
+            true,
+            false)) = 0 then false else true end is_forward,
+            case when max(if(
+            tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and
+            tc2.type ='${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE}',
+            true,
+            false)) = 0 then false else true end is_quote,
+            if(tcl.chirper_id is not null,true, false) is_like
+        </if>
+        from tb_chirper as tc1
+        <if test="userId != null">
+            left join tb_chirper_like tcl on tcl.chirper_id=tc1.id and tcl.user_id=#{userId}
+            left join tb_chirper tc2 on tc2.referenced_chirper_id=tc1.id and tc2.author_id=#{userId}
+        </if>
+        where tc1.author_id=#{authorId}
+        and tc1.status = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+        <if test="userId != null">
+            group by tc1.id,
+            tc1.create_time
+        </if>
+        order by tc1.create_time desc
+        limit #{offset},#{size}
+    </select>
+
+
+    <select id="getLimit" resultMap="chirperVoResultMap">
+        select tc1.id,
+        tc1.author_id,
+        tc1.conversation_id,
+        tc1.in_reply_to_user_id,
+        tc1.create_time,
+        tc1.`text`,
+        tc1.`type`,
+        tc1.referenced_chirper_id,
+        tc1.media_keys,
+        tc1.view_count,
+        tc1.reply_count,
+        tc1.like_count,
+        tc1.quote_count,
+        tc1.forward_count,
+        tc1.`status`
+        <if test="userId != null">
+            , case when
+            max(if(tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and tc2.type = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@FORWARD}',
+            true,
+            false)) = 0 then false else true end is_forward,
+            case when max(if(
+            tc2.status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+            and
+            tc2.type ='${@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE}',
+            true,
+            false)) = 0 then false else true end is_quote,
+            if(tcl.chirper_id is not null,true, false) is_like
+        </if>
+        from tb_chirper as tc1
+        <if test="userId != null">
+            left join tb_chirper_like tcl on tcl.chirper_id=tc1.id and tcl.user_id=#{userId}
+            left join tb_chirper tc2 on tc2.referenced_chirper_id=tc1.id and tc2.author_id=#{userId}
+        </if>
+        where tc1.status = '${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+        <if test="userId != null">
+            group by tc1.id,
+            tc1.create_time
+        </if>
+        order by tc1.create_time desc
+        limit #{offset},#{size}
+    </select>
+
+    <insert id="addReply">
+        insert into tb_chirper(id, author_id, conversation_id, in_reply_to_chirper_id, in_reply_to_user_id, create_time,
+                               text, type, media_keys, view_count, reply_count, like_count,
+                               quote_count, forward_count, status)
+        select #{id},
+               #{authorId},
+               tc1.conversation_id,
+               #{inReplyToChirperId},
+               tc1.author_id,
+               #{createTime},
+               #{text},
+               #{type},
+               #{mediaKeys,typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler},
+               0,
+               0,
+               0,
+               0,
+               0,
+               #{status}
+        from tb_chirper tc1
+        where tc1.id = #{inReplyToChirperId}
+    </insert>
+
+    <select id="getIdByReferenceAndAuthor" resultType="com.zyq.chirp.chirperserver.domain.pojo.Chirper">
+        select id,author_id,referenced_chirper_id from tb_chirper where type=#{type}
+        and status='${@com.zyq.chirp.chirperserver.domain.enums.ChirperStatus@ACTIVE.getStatus()}'
+        and (referenced_chirper_id,author_id)
+        in
+        <foreach collection="chirpers" item="item" close=")" separator="," open="(">
+            #{item.referencedChirperId},
+            #{item.authorId}
+        </foreach>
+    </select>
+
+    <insert id="saveBatch">
+        insert into tb_chirper(id, author_id, conversation_id, in_reply_to_chirper_id, in_reply_to_user_id, create_time,
+        text, type, referenced_chirper_id, media_keys, view_count, reply_count, like_count, quote_count, forward_count,
+        status)
+        select temp.* from
+        (<foreach collection="chirpers" item="item" separator="union">
+        select
+        #{item.id},
+        #{item.authorId} as author_id,
+        #{item.conversationId},
+        #{item.inReplyToChirperId} as reply_id,
+        #{item.inReplyToUserId},
+        #{item.createTime},
+        #{item.text},
+        #{item.type},
+        #{item.referencedChirperId} as reference_id,
+        #{item.mediaKeys},
+        #{item.viewCount},
+        #{item.replyCount},
+        #{item.likeCount},
+        #{item.quoteCount},
+        #{item.forwardCount},
+        #{item.status}
+    </foreach>) as temp
+        join tb_user tu on tu.id=temp.author_id
+        <if test="type=@com.zyq.chirp.chirperserver.domain.enums.ChirperType@FORWARD
+or
+type=@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE">
+            join tb_chirper tc on tc.id=temp.reference_id
+        </if>
+    </insert>
+</mapper>
