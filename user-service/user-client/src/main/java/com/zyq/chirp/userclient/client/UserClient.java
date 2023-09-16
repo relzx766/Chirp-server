@@ -12,13 +12,6 @@ public interface UserClient {
     @PostMapping("/user/add")
     ResponseEntity<UserDto> addUser(@RequestBody UserDto userDto);
 
-    @PostMapping("/profile/update")
-    ResponseEntity updateProfile(@RequestBody UserDto userDto);
-
-    @GetMapping("/user/profile/{id}")
-    ResponseEntity<UserDto> getProfile(@PathVariable("id") Long userId);
-
-
     @PostMapping("/user/detail/email")
     ResponseEntity<UserDto> getDetailByEmail(@RequestParam("email") String email);
 
@@ -28,22 +21,7 @@ public interface UserClient {
     @GetMapping("/user/detail/name/{username}")
     ResponseEntity<UserDto> getDetailByUsername(@PathVariable("username") String username);
 
-    @PostMapping("/user/search/{page}")
-    ResponseEntity<List<UserDto>> search(@PathVariable("page") Integer page,
-                                         @RequestParam("keyword") String keyword);
 
-    @PostMapping("/rela/follow")
-    ResponseEntity follow(@RequestParam("toId") Long toId);
-
-    @PostMapping("/rela/unfollow")
-    ResponseEntity unfollow(@RequestParam("toId") Long toId);
-
-    @PostMapping("/rela/block")
-    ResponseEntity block(@RequestParam("toId") Long toId);
-
-    @PostMapping("/rela/unblock")
-    ResponseEntity unblock(@RequestParam("toId") Long toId);
-
-    @PostMapping("/user/short")
+    @PostMapping("/user/basic_info")
     ResponseEntity<List<UserDto>> getShort(@RequestParam("ids") List<Long> userIds);
 }

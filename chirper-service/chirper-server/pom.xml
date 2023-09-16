@@ -35,6 +35,11 @@
         </dependency>
         <dependency>
             <groupId>com.zyq.chirp</groupId>
+            <artifactId>user-client</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
             <artifactId>advice-client</artifactId>
             <version>1.0</version>
         </dependency>

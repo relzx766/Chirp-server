@@ -3,6 +3,7 @@ package com.zyq.chirp.chirperserver.service;
 import com.zyq.chirp.chirpclient.dto.LikeDto;
 import com.zyq.chirp.chirperserver.domain.pojo.Like;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface LikeService {
@@ -12,6 +13,16 @@ public interface LikeService {
 
     void cancelLike(LikeDto likeDto);
 
+    /**
+     * 获取用户对推文的点赞信息
+     *
+     * @param chirperIds
+     * @param userId
+     * @return 有点赞记录的推文id
+     */
+    List<Long> getLikeInfo(Collection<Long> chirperIds, Long userId);
+
+    List<Like> getLikeRecord(Long userId, Integer page);
 
     String getKey(LikeDto likeDto);
 

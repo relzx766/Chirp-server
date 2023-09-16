@@ -186,12 +186,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserDto> getShortProfile(Collection<Long> userIds) {
+    public List<UserDto> getBasicInfo(Collection<Long> userIds) {
         if (userIds == null || userIds.isEmpty()) {
             throw new ChirpException(Code.ERR_BUSINESS, "未提供用户id");
         }
         return userMapper.selectList(new LambdaQueryWrapper<User>()
-                        .select(User::getId, User::getUsername, User::getNickname, User::getSmallAvatarUrl)
+                        .select(User::getId,
+                                User::getUsername,
+                                User::getNickname,
+                                User::getSmallAvatarUrl,
+                                User::getLargeAvatarUrl)
                         .in(User::getId, userIds))
                 .stream()
                 .map(user -> userConvertor.pojoToDto(user))

@@ -26,5 +26,5 @@ public interface UserService {
 
     List<UserDto> search(String keyword, Long currentUserId, Integer page);
 
-    List<UserDto> getShortProfile(Collection<Long> userIds);
+    List<UserDto> getBasicInfo(Collection<Long> userIds);
 }

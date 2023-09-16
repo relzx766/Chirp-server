@@ -18,4 +18,13 @@ public enum ChirperType {
      * 引用
      */
     QUOTE;
+
+    public static ChirperType find(String type) {
+        for (ChirperType chirperType : ChirperType.values()) {
+            if (chirperType.name().equalsIgnoreCase(type)) {
+                return chirperType;
+            }
+        }
+        return null;
+    }
 }

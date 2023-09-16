@@ -73,8 +73,8 @@ public class UserController {
         return ResponseEntity.ok(userService.search(keyword, currentUserId, page));
     }
 
-    @PostMapping("/short")
-    public ResponseEntity<List<UserDto>> getShort(@RequestParam("ids") List<Long> userIds) {
-        return ResponseEntity.ok(userService.getShortProfile(userIds));
+    @PostMapping("/basic_info")
+    public ResponseEntity<List<UserDto>> getBasicInfo(@RequestParam("ids") List<Long> userIds) {
+        return ResponseEntity.ok(userService.getBasicInfo(userIds));
     }
 }

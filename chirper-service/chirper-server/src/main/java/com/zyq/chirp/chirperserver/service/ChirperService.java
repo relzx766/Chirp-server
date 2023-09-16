@@ -2,16 +2,35 @@ package com.zyq.chirp.chirperserver.service;
 
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperStatus;
+import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
+import jakarta.annotation.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface ChirperService {
     ChirperDto save(ChirperDto chirperDto);
 
     ChirperDto reply(ChirperDto chirperDto);
 
-    ChirperDto delayPost(ChirperDto chirperDto, Long delay);
+    /**
+     * 获取被引用的推文
+     *
+     * @param ids 被引用者
+     * @return k:被引用者id v:被引用者
+     */
+
+    Map<Long, ChirperDto> fetchReference(Collection<Long> ids);
+
+    /**
+     * 获取互动信息，如点赞，引用
+     *
+     * @param chirperDtos
+     * @param userId
+     * @return
+     */
+    List<ChirperDto> getInteractionInfo(List<ChirperDto> chirperDtos, Long userId);
 
     void forward(Long chirperId, Long userId);
 
@@ -21,16 +40,6 @@ public interface ChirperService {
      */
     void cancelForward(Long chirperId, Long userId);
 
-    /**
-     * 根据被引用推文id与作者id，获取目前推文
-     * referencedChirperId-authorId
-     * \/
-     * id
-     *
-     * @param chirperDtos
-     * @return 推文列表
-     */
-    List<ChirperDto> getByReference(List<ChirperDto> chirperDtos);
 
     ChirperDto quote(ChirperDto chirperDto);
 
@@ -38,15 +47,19 @@ public interface ChirperService {
     void delete(Long chirperId, Long currentUserId);
 
 
-    ChirperDto getById(Long chirperId, Long currentUserId);
+    ChirperDto getById(Long chirperId);
 
-    List<ChirperDto> getPage(Integer page, Long userId);
+    List<ChirperDto> getById(Collection<Long> chirperIds);
 
-    List<ChirperDto> search(String keyword, Integer page, Long currentUserId, Boolean isMedia);
+    List<ChirperDto> getPage(Integer page);
 
-    List<ChirperDto> getChildChirper(Long chirperId, Integer page, Long currentUserId);
+    List<ChirperDto> search(String keyword, Integer page, Boolean isMedia);
 
-    List<ChirperDto> getByAuthorId(Long authorId, Integer page, Long currentUserId);
+    List<ChirperDto> getChildChirper(Long chirperId, Integer page);
+
+    List<ChirperDto> getByUserId(Long userId, Integer page, @Nullable ChirperType type, @Nullable Boolean isMedia);
+
+    List<ChirperDto> getLikeRecordByUserId(Long userId, Integer page);
 
     void updateStatus(Long chirperId, ChirperStatus chirperStatus);
 
@@ -68,9 +81,6 @@ public interface ChirperService {
      */
     int updateForward(Long chirperId, Integer delta);
 
-    Long getAuthorIdByChirperId(Long chirperId);
-
-    ChirperDto getShort(Long chirperId);
 
     /**
      * 获取基础的推文信息，不包含互动等消息
@@ -81,6 +91,7 @@ public interface ChirperService {
 
     List<ChirperDto> getShort(Collection<Long> chirperIds);
 
-    List<ChirperDto> combineWithMedia(List<ChirperDto> chirperDtos);
+
+    List<ChirperDto> combineWithMedia(Collection<ChirperDto> chirperDtos);
 
 }

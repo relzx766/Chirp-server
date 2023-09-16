@@ -8,6 +8,7 @@ import java.sql.Timestamp;
 
 @Data
 @AllArgsConstructor
+
 public class ChirperDto {
 
     private Long id;
@@ -26,6 +27,7 @@ public class ChirperDto {
     private String text;
     private String type;
     private Long referencedChirperId;
+    private ChirperDto referenced;
     private String mediaKeys;
 
     private Integer viewCount;

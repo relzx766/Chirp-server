@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -24,7 +23,7 @@ public class Chirper {
     private String text;
     private String type;
     private Long referencedChirperId;
-    @TableField(value = "media_keys", typeHandler = JacksonTypeHandler.class)
+    @TableField(value = "media_keys")
     private String mediaKeys;
     private Integer viewCount;
     private Integer likeCount;

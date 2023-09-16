@@ -1,6 +1,7 @@
 package com.zyq.chirp.chirperserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zyq.chirp.adviceclient.dto.MessageType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.chirpclient.dto.LikeDto;
@@ -14,6 +15,7 @@ import com.zyq.chirp.chirperserver.service.LikeService;
 import com.zyq.chirp.common.exception.ChirpException;
 import com.zyq.chirp.common.model.Code;
 import com.zyq.chirp.common.util.CacheUtil;
+import com.zyq.chirp.common.util.PageUtil;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.BoundHashOperations;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -35,6 +38,8 @@ public class LikeServiceImpl implements LikeService {
     RedisTemplate redisTemplate;
     @Value("${mq.topic.site-message.like}")
     String topic;
+    @Value("${default-config.page-size}")
+    Integer pageSize;
     Integer expire = 6;
 
     @Override
@@ -55,7 +60,7 @@ public class LikeServiceImpl implements LikeService {
         }
         SiteMessageDto siteMessageDto = new SiteMessageDto(
                 likeDto.getUserId(), likeDto.getChirperId(), MessageType.LIKE.name());
-        chirperProducer.avoidRedundancySend(CacheUtil.combineKey(likeDto.getChirperId(), likeDto.getUserId()),
+        chirperProducer.avoidSend(CacheUtil.combineKey(likeDto.getChirperId(), likeDto.getUserId()),
                 topic, siteMessageDto, Duration.ofHours(expire));
     }
 
@@ -74,6 +79,27 @@ public class LikeServiceImpl implements LikeService {
         if (!flag) {
             throw new ChirpException(Code.ERR_BUSINESS, "重复取消点赞");
         }
+    }
+
+    @Override
+    public List<Long> getLikeInfo(Collection<Long> chirperIds, Long userId) {
+        if (chirperIds == null || chirperIds.isEmpty() || userId == null) {
+            return List.of();
+        }
+        return likeMapper.selectList(new LambdaQueryWrapper<Like>()
+                        .select(Like::getChirperId)
+                        .eq(Like::getUserId, userId)
+                        .in(Like::getChirperId, chirperIds))
+                .stream()
+                .map(Like::getChirperId).toList();
+    }
+
+    @Override
+    public List<Like> getLikeRecord(Long userId, Integer page) {
+        int offset = PageUtil.getOffset(page, pageSize);
+        return likeMapper.selectPage(new Page<>(offset, pageSize), new LambdaQueryWrapper<Like>()
+                        .eq(Like::getUserId, userId))
+                .getRecords();
     }
 
 
