@@ -5,12 +5,14 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import java.sql.Timestamp;
 
 @AllArgsConstructor
 @Data
+@Builder
 @TableName("tb_chirper")
 public class Chirper {
     @TableId(type = IdType.ASSIGN_ID)

@@ -2,7 +2,8 @@ package com.zyq.chirp.chirperserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zyq.chirp.adviceclient.dto.MessageType;
+import com.zyq.chirp.adviceclient.dto.EntityType;
+import com.zyq.chirp.adviceclient.dto.EventType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.chirpclient.dto.LikeDto;
 import com.zyq.chirp.chirperserver.aspect.Statistic;
@@ -58,8 +59,12 @@ public class LikeServiceImpl implements LikeService {
         if (!flag) {
             throw new ChirpException(Code.ERR_BUSINESS, "重复点赞");
         }
-        SiteMessageDto siteMessageDto = new SiteMessageDto(
-                likeDto.getUserId(), likeDto.getChirperId(), MessageType.LIKE.name());
+        SiteMessageDto siteMessageDto = SiteMessageDto.builder()
+                .entity(String.valueOf(likeDto.getChirperId()))
+                .event(EventType.LIKE.name())
+                .entityType(EntityType.CHIRPER.name())
+                .senderId(likeDto.getUserId())
+                .build();
         chirperProducer.avoidSend(CacheUtil.combineKey(likeDto.getChirperId(), likeDto.getUserId()),
                 topic, siteMessageDto, Duration.ofHours(expire));
     }

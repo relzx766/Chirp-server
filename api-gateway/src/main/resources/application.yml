@@ -95,7 +95,7 @@ default-config:
       paths:
         - /chirper-service/chirper/detail/**
         - /chirper-service/chirper/page/**
-        - /user-service/user/short
+        - /user-service/user/basic_info
         - /advice-service/interaction/**
         - /user-service/user/profile/**
         - /chirper-service/chirper/author/**

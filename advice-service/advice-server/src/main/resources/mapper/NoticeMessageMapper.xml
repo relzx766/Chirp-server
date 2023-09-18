@@ -13,56 +13,51 @@
         <result property="createTime" column="create_time"/>
     </resultMap>
     <insert id="insertBatch">
-        replace into tb_site_message(id, sender_id, receiver_id,
-        chirper_id, type, create_time, is_read)
+        replace into tb_site_message(id, sender_id, receiver_id, entity, entity_type, event, notice_type, create_time,
+        is_read)
         values
 
         <foreach collection="messages" item="message" separator=",">
-            ( #{message.id},
+            (#{message.id},
             #{message.senderId},
             #{message.receiverId},
-            #{message.chirperId},
-            #{message.type} ,
+            #{message.entity},
+            #{message.entityType},
+            #{message.event} ,
+            #{message.noticeType},
             #{message.createTime} ,
-            #{message.isRead} )
+            #{message.isRead})
         </foreach>
     </insert>
 
-    <select id="getByReceiverId" resultType="com.zyq.chirp.adviceserver.domain.pojo.InteractionMessage">
+    <select id="getByReceiverId" resultType="com.zyq.chirp.adviceserver.domain.pojo.Notification">
         select id,
                sender_id,
                receiver_id,
-               chirper_id,
-               type,
-               create_time
+               entity,
+               entity_type,
+               event,
+               notice_type,
+               create_time,
+               is_read
         from tb_site_message tsm
-
         where tsm.receiver_id = #{id}
         order by create_time desc
     </select>
 
-    <select id="getUnReadByReceiverId" resultType="com.zyq.chirp.adviceserver.domain.pojo.InteractionMessage">
+    <select id="getUnReadByReceiverId" resultType="com.zyq.chirp.adviceserver.domain.pojo.Notification">
         select id,
                sender_id,
                receiver_id,
-               chirper_id,
-               type,
-               create_time
+               entity,
+               entity_type,
+               event,
+               notice_type,
+               create_time,
+               is_read
         from tb_site_message
         where receiver_id = #{id}
           and is_read = 0
         order by create_time desc
     </select>
-
-    <insert id="insertOne">
-        insert into tb_site_message(id, sender_id, receiver_id, chirper_id, type, create_time, is_read)
-        SELECT temp.id, s_id, tc.author_id, c_id, tp, c_t, i_r
-        from (select #{id}         as id,
-                     #{senderId}   as s_id,
-                     #{chirperId}  as c_id,
-                     #{type}       as tp,
-                     #{createTime} as c_t,
-                     #{isRead}     as i_r) temp
-                 join tb_chirper tc on temp.c_id = tc.id
-    </insert>
 </mapper>

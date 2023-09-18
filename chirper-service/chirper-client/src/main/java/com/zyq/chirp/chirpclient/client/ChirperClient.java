@@ -12,9 +12,11 @@ import java.util.List;
 public interface ChirperClient {
     //chirperController
 
+    @PostMapping("/chirper/content")
+    ResponseEntity<List<ChirperDto>> getContent(@RequestParam("ids") List<Long> ids);
 
-    @PostMapping("/chirper/short")
-    ResponseEntity<List<ChirperDto>> getShort(@RequestParam("ids") List<Long> ids);
+    @PostMapping("/chirper/basic_info")
+    ResponseEntity<List<ChirperDto>> getBasicInfo(@RequestParam("ids") List<Long> ids);
 
     //likeController
 

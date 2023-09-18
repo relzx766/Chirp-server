@@ -3,7 +3,6 @@ package com.zyq.chirp.chirperserver.service;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperStatus;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
-import jakarta.annotation.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -47,17 +46,14 @@ public interface ChirperService {
     void delete(Long chirperId, Long currentUserId);
 
 
-    ChirperDto getById(Long chirperId);
-
     List<ChirperDto> getById(Collection<Long> chirperIds);
 
-    List<ChirperDto> getPage(Integer page);
+    List<ChirperDto> getPage(Integer page, Long chirperId, Collection<Long> userIds, ChirperType type, Boolean isMedia);
 
     List<ChirperDto> search(String keyword, Integer page, Boolean isMedia);
 
-    List<ChirperDto> getChildChirper(Long chirperId, Integer page);
+    List<ChirperDto> getFollowing(Integer page, Long userId);
 
-    List<ChirperDto> getByUserId(Long userId, Integer page, @Nullable ChirperType type, @Nullable Boolean isMedia);
 
     List<ChirperDto> getLikeRecordByUserId(Long userId, Integer page);
 
@@ -83,13 +79,13 @@ public interface ChirperService {
 
 
     /**
-     * 获取基础的推文信息，不包含互动等消息
+     * 获取基础的推文信息
      *
      * @param chirperIds
      * @return
      */
 
-    List<ChirperDto> getShort(Collection<Long> chirperIds);
+    List<ChirperDto> getBasicInfo(Collection<Long> chirperIds);
 
 
     List<ChirperDto> combineWithMedia(Collection<ChirperDto> chirperDtos);

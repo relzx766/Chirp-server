@@ -2,6 +2,7 @@ package com.zyq.chirp.adviceserver.service.strategy.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zyq.chirp.adviceclient.dto.EntityType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.adviceserver.config.KafkaContainerConfig;
 import com.zyq.chirp.adviceserver.service.strategy.MessageStrategy;
@@ -12,6 +13,7 @@ import com.zyq.chirp.userclient.dto.UserDto;
 import jakarta.annotation.Resource;
 import jakarta.websocket.Session;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
@@ -21,14 +23,17 @@ import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class InteractionMessageStrategy implements MessageStrategy {
 
     @Resource
@@ -49,9 +54,9 @@ public class InteractionMessageStrategy implements MessageStrategy {
     String group;
 
     /**
-     * 推送未写入数据库的站内信
+     * 推送站内信
      *
-     * @param messageDtos 未写入数据库的站内信
+     * @param messageDtos 站内信
      * @param session     websocket session
      * @param userId      用户id
      */
@@ -68,33 +73,96 @@ public class InteractionMessageStrategy implements MessageStrategy {
         container.resume();
     }
 
-    private String messageCombine(List<SiteMessageDto> messageDtos) throws JsonProcessingException, ExecutionException, InterruptedException {
-        //获取推文、用户id列表
-        List<Long> chirperIds = messageDtos.stream().map(SiteMessageDto::getTargetId).toList();
-        List<Long> userIds = messageDtos.stream().map(SiteMessageDto::getSenderId).toList();
-        //异步获取推文、用户信息
-        CompletableFuture<List<ChirperDto>> chirperFuture = CompletableFuture.supplyAsync(() ->
-                        chirperClient.getShort(chirperIds).getBody())
-                .exceptionally(throwable -> List.of());
-        CompletableFuture<List<UserDto>> userFuture = CompletableFuture.supplyAsync(() ->
-                        userClient.getShort(userIds).getBody())
-                .exceptionally(throwable -> List.of());
-        CompletableFuture<Void> combine = CompletableFuture.allOf(chirperFuture, userFuture);
-        //等待信息获取完成
-        combine.join();
-        Map<Long, ChirperDto> chirperMap = chirperFuture.get().stream().collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
-        Map<Long, UserDto> userMap = userFuture.get().stream().collect(Collectors.toMap(UserDto::getId, Function.identity()));
-        messageDtos.forEach(messageDto -> {
-            messageDto.setSenderAvatar(userMap.get(messageDto.getSenderId()).getSmallAvatarUrl());
-            messageDto.setSenderName(userMap.get(messageDto.getSenderId()).getNickname());
-            if (messageDto.getTargetId() != null) {
-                ChirperDto chirperDto = chirperMap.get(messageDto.getTargetId());
-                if (chirperDto != null) {
-                    messageDto.setText(chirperMap.get(messageDto.getTargetId()).getText());
+    private List<SiteMessageDto> chirperMessageCombine(List<SiteMessageDto> messageDtos) {
+        try {
+            List<Long> chirperIds = new ArrayList<>();
+            List<Long> senderIds = new ArrayList<>();
+            messageDtos.forEach(messageDto -> {
+                System.out.println("11111111");
+                System.out.println(messageDto);
+                chirperIds.add(Long.parseLong(messageDto.getEntity()));
+                senderIds.add(messageDto.getSenderId());
+            });
+            CompletableFuture<List<ChirperDto>> chirperFuture = CompletableFuture.supplyAsync(() ->
+                    {
+                        System.out.println("22222222222222");
+                        return chirperClient.getContent(chirperIds).getBody();
+                    }
+            ).exceptionally(throwable -> {
+                throwable.printStackTrace();
+                return List.of();
+            });
+            CompletableFuture<List<UserDto>> userFuture = CompletableFuture.supplyAsync(()
+                    -> userClient.getShort(senderIds).getBody()
+            ).exceptionally(throwable -> {
+                throwable.printStackTrace();
+                return List.of();
+            });
+            CompletableFuture<Void> allOf = CompletableFuture.allOf(chirperFuture, userFuture);
+            allOf.join();
+            Map<Long, ChirperDto> chirperMap = chirperFuture.get()
+                    .stream().collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
+            Map<Long, UserDto> userMap = userFuture.get()
+                    .stream().collect(Collectors.toMap(UserDto::getId, Function.identity()));
+            messageDtos.forEach(messageDto -> {
+                try {
+                    Long chirperId = Long.parseLong(messageDto.getEntity());
+                    messageDto.setEntity(objectMapper.writeValueAsString(chirperMap.get(chirperId)));
+                    UserDto sender = userMap.get(messageDto.getSenderId());
+                    messageDto.setSenderName(sender.getNickname());
+                    messageDto.setSenderAvatar(sender.getSmallAvatarUrl());
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
                 }
+            });
+        } catch (ExecutionException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        return messageDtos;
+    }
+
+    private List<SiteMessageDto> userMessageCombine(List<SiteMessageDto> messageDtos) {
+        try {
+            List<Long> senderIds = messageDtos.stream().map(SiteMessageDto::getSenderId).toList();
+            Map<Long, UserDto> senderMap = Objects.requireNonNull(userClient.getShort(senderIds).getBody())
+                    .stream().collect(Collectors.toMap(UserDto::getId, Function.identity()));
+            messageDtos.forEach(messageDto -> {
+                UserDto sender = senderMap.get(messageDto.getSenderId());
+                messageDto.setSenderName(sender.getNickname());
+                messageDto.setSenderAvatar(sender.getSmallAvatarUrl());
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return messageDtos;
+    }
+
+    private String messageCombine(List<SiteMessageDto> messageDtos) {
+        List<SiteMessageDto> chirperMsg = new ArrayList<>();
+        List<SiteMessageDto> userMsg = new ArrayList<>();
+        messageDtos.forEach(messageDto -> {
+            if (EntityType.CHIRPER.name().equals(messageDto.getEntityType())) {
+                chirperMsg.add(messageDto);
+            }
+            if (EntityType.USER.name().equals(messageDto.getEntityType())) {
+                userMsg.add(messageDto);
             }
         });
-        return objectMapper.writeValueAsString(messageDtos);
+        if (!chirperMsg.isEmpty()) {
+            this.chirperMessageCombine(chirperMsg);
+        }
+        if (!userMsg.isEmpty()) {
+            this.userMessageCombine(userMsg);
+        }
+        List<SiteMessageDto> messages = new ArrayList<>();
+        messages.addAll(chirperMsg);
+        messages.addAll(userMsg);
+        try {
+            return objectMapper.writeValueAsString(messages);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return "[]";
     }
 
     private BatchMessageListener<String, SiteMessageDto> messageHandler(Session session) {

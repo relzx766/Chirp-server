@@ -1,6 +1,7 @@
 package com.zyq.chirp.chirpclient.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
@@ -8,7 +9,7 @@ import java.sql.Timestamp;
 
 @Data
 @AllArgsConstructor
-
+@Builder
 public class ChirperDto {
 
     private Long id;

@@ -1,15 +1,15 @@
 package com.zyq.chirp.adviceserver.service;
 
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
-import com.zyq.chirp.adviceserver.domain.pojo.InteractionMessage;
+import com.zyq.chirp.adviceserver.domain.pojo.Notification;
 
 import java.util.Collection;
 import java.util.List;
 
 public interface InteractionMessageService {
-    void save(InteractionMessage interactionMessage);
+    void save(Notification notification);
 
-    void saveBatch(Collection<InteractionMessage> interactionMessages);
+    void saveBatch(Collection<Notification> notifications);
 
     List<SiteMessageDto> getByReceiverId(Long receiverId);
 

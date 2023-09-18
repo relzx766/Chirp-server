@@ -1,6 +1,6 @@
 package com.zyq.chirp.adviceclient.dto;
 
-public enum MessageType {
+public enum EventType {
     /**
      * 点赞
      */

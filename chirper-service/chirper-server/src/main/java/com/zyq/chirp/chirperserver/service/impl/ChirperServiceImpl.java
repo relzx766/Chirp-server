@@ -7,7 +7,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zyq.chirp.adviceclient.dto.MessageType;
+import com.zyq.chirp.adviceclient.dto.EntityType;
+import com.zyq.chirp.adviceclient.dto.EventType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.aspect.Statistic;
@@ -99,8 +100,13 @@ public class ChirperServiceImpl implements ChirperService {
         if (!isInsert || !isSet) {
             throw new ChirpException(Code.ERR_BUSINESS, "回复失败");
         }
-        SiteMessageDto siteMessageDto = new SiteMessageDto(chirperDto.getAuthorId(), chirperDto.getInReplyToChirperId(), MessageType.REPLY.name());
-        chirperProducer.send(replyTopic, siteMessageDto);
+        SiteMessageDto message = SiteMessageDto.builder()
+                .event(EventType.REPLY.name())
+                .entityType(EntityType.CHIRPER.name())
+                .senderId(chirper.getAuthorId())
+                .entity(String.valueOf(chirper.getInReplyToChirperId()))
+                .build();
+        chirperProducer.send(replyTopic, message);
         return chirperConvertor.pojoToDto(chirper);
     }
 
@@ -119,7 +125,8 @@ public class ChirperServiceImpl implements ChirperService {
             //获取被引用推文的互动信息---
             Map<Integer, ChirperDto> refers = new HashMap<>();
             for (int i = 0; i < chirperDtos.size(); i++) {
-                if (chirperDtos.get(i).getReferenced() != null) {
+                if (ChirperType.FORWARD.name().equals(chirperDtos.get(i).getType()) &&
+                        chirperDtos.get(i).getReferenced() != null) {
                     refers.put(i, chirperDtos.get(i).getReferenced());
                 }
             }
@@ -182,7 +189,12 @@ public class ChirperServiceImpl implements ChirperService {
                     .eq(Chirper::getAuthorId, userId)
                     .eq(Chirper::getType, ChirperType.FORWARD.name()));
         }
-        SiteMessageDto messageDto = new SiteMessageDto(userId, chirperId, MessageType.FORWARD.name());
+        SiteMessageDto messageDto = SiteMessageDto.builder()
+                .entity(String.valueOf(chirperId))
+                .entityType(EntityType.CHIRPER.name())
+                .event(EventType.FORWARD.name())
+                .senderId(userId)
+                .build();
         chirperProducer.avoidSend(CacheUtil.combineKey(CacheUtil.combineKey(chirperId, userId)),
                 forwardTopic, messageDto, Duration.ofHours(expire));
     }
@@ -220,7 +232,11 @@ public class ChirperServiceImpl implements ChirperService {
         if (!isInsert || !isSet) {
             throw new ChirpException(Code.ERR_BUSINESS, "发布失败");
         }
-        SiteMessageDto messageDto = new SiteMessageDto(chirper.getAuthorId(), chirper.getReferencedChirperId(), MessageType.QUOTE.name());
+        SiteMessageDto messageDto = SiteMessageDto.builder()
+                .entity(String.valueOf(chirperDto.getReferencedChirperId()))
+                .event(EventType.QUOTE.name())
+                .entityType(EntityType.CHIRPER.name())
+                .senderId(chirper.getAuthorId()).build();
         chirperProducer.send(quoteTopic, messageDto);
         return chirperConvertor.pojoToDto(chirper);
     }
@@ -237,19 +253,6 @@ public class ChirperServiceImpl implements ChirperService {
         }
     }
 
-
-    @Override
-    @Statistic(id = "#chirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
-    @Cacheable(cacheNames = "chirper:detail#1", key = "#chirperId")
-    public ChirperDto getById(Long chirperId) {
-        if (chirperId == null) {
-            throw new ChirpException(Code.ERR_BUSINESS, "未指定推文");
-        }
-        Chirper chirper = chirperMapper.selectOne(new LambdaQueryWrapper<Chirper>()
-                .eq(Chirper::getId, chirperId).eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus()));
-        ChirperDto chirperDto = chirperConvertor.pojoToDto(chirper);
-        return this.combineWithMedia(List.of(chirperDto)).get(0);
-    }
 
     @Override
     public List<ChirperDto> getById(Collection<Long> chirperIds) {
@@ -275,18 +278,29 @@ public class ChirperServiceImpl implements ChirperService {
     }
 
     @Override
-    @Cacheable(value = "chirper:page#4", key = "#page")
-    public List<ChirperDto> getPage(Integer page) {
-        int offset = PageUtil.getOffset(page, pageSize);
+    @Cacheable(value = "chirper:page#4", key = "#page+':'+#chirperId+':'+#userIds+':'+#type+':'+#isMedia")
+    public List<ChirperDto> getPage(Integer page, Long chirperId, Collection<Long> userIds, ChirperType type, Boolean isMedia) {
+        Page<Chirper> pageSelector = new Page<>(page, pageSize, false);
+        LambdaQueryWrapper<Chirper> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus());
+        wrapper.orderByDesc(Chirper::getCreateTime);
+        if (chirperId != null) {
+            wrapper.eq(Chirper::getInReplyToChirperId, chirperId);
+        }
+        if (userIds != null && !userIds.isEmpty()) {
+            wrapper.in(Chirper::getAuthorId, userIds);
+        }
+        if (type != null) {
+            wrapper.eq(Chirper::getType, type.name());
+        }
+        if (isMedia != null && isMedia) {
+            wrapper.isNotNull(Chirper::getMediaKeys);
+        }
         //转换为map类型，为下面获取被引用推文准备
-        Map<Long, ChirperDto> chirperDtoMap = chirperMapper.selectPage(new Page<>(offset, pageSize),
-                        new LambdaQueryWrapper<Chirper>()
-                                .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
-                                .orderByDesc(Chirper::getCreateTime))
-                .getRecords()
+        Map<Long, ChirperDto> chirperDtoMap = chirperMapper.selectPage(pageSelector, wrapper).getRecords()
                 .stream()
                 .map(chirper -> chirperConvertor.pojoToDto(chirper))
-                .collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
+                .collect(Collectors.toMap(ChirperDto::getId, Function.identity(), (k1, k2) -> k1, LinkedHashMap::new));
         //引用推文
         Map<Long, Long> referMap = chirperDtoMap.values().stream().filter(chirperDto ->
                         ChirperType.FORWARD.name().equals(chirperDto.getType())
@@ -340,67 +354,9 @@ public class ChirperServiceImpl implements ChirperService {
                 .orElse(List.<ChirperDto>of());
     }
 
-    /**
-     * 获取推文下的评论
-     *
-     * @param chirperId
-     * @param page
-     * @return
-     */
     @Override
-    @Cacheable(cacheNames = "chirper:reply#4", key = "#chirperId+':'+#page")
-    public List<ChirperDto> getChildChirper(Long chirperId, Integer page) {
-        if (chirperId == null) {
-            throw new ChirpException(Code.ERR_BUSINESS, "未提供推文id");
-        }
-        int offset = PageUtil.getOffset(page, pageSize);
-        List<ChirperDto> chirperDtos = chirperMapper.selectPage(new Page<>(offset, pageSize), new LambdaQueryWrapper<Chirper>()
-                        .eq(Chirper::getInReplyToChirperId, chirperId)
-                        .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
-                        .orderByDesc(Chirper::getCreateTime))
-                .getRecords().stream()
-                .map(chirper -> chirperConvertor.pojoToDto(chirper))
-                .toList();
-        return this.combineWithMedia(chirperDtos);
-    }
-
-    @Override
-    @Cacheable(cacheNames = "chirper:author#1", key = "#userId+':'+#page+':'+#type+':'+#isMedia")
-    public List<ChirperDto> getByUserId(Long userId, Integer page, ChirperType type, Boolean isMedia) {
-        int offset = PageUtil.getOffset(page, pageSize);
-        return Optional.ofNullable(userId)
-                .map(author -> {
-                            LambdaQueryWrapper<Chirper> wrapper = new LambdaQueryWrapper<Chirper>()
-                                    .eq(Chirper::getAuthorId, author)
-                                    .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
-                                    .orderByDesc(Chirper::getCreateTime);
-                            if (type != null) {
-                                wrapper.eq(Chirper::getType, type.name());
-                            }
-                            if (isMedia != null && isMedia) {
-                                wrapper.isNotNull(Chirper::getMediaKeys);
-                            }
-                            Map<Long, ChirperDto> chirperDtoMap = chirperMapper.selectPage(new Page<>(offset, pageSize), wrapper)
-                                    .getRecords().stream()
-                                    .map(chirper -> chirperConvertor.pojoToDto(chirper))
-                                    .collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
-                            //引用推文
-                            Map<Long, Long> referMap = chirperDtoMap.values().stream().filter(chirperDto ->
-                                            ChirperType.FORWARD.name().equals(chirperDto.getType())
-                                                    || ChirperType.QUOTE.name().equals(chirperDto.getType()))
-                                    .collect(Collectors.toMap(ChirperDto::getId, ChirperDto::getReferencedChirperId));
-                            if (!referMap.isEmpty()) {
-                                Map<Long, ChirperDto> fetchReference = this.fetchReference(referMap.values());
-                                referMap.forEach((k, v) -> {
-                                    ChirperDto refer = chirperDtoMap.get(k);
-                                    refer.setReferenced(fetchReference.get(v));
-                                    chirperDtoMap.put(k, refer);
-                                });
-                            }
-                            return this.combineWithMedia(chirperDtoMap.values());
-                        }
-                )
-                .orElseThrow(() -> new ChirpException(Code.ERR_BUSINESS, "未指定博主"));
+    public List<ChirperDto> getFollowing(Integer page, Long userId) {
+        return null;
     }
 
 
@@ -439,9 +395,9 @@ public class ChirperServiceImpl implements ChirperService {
 
 
     @Override
-    public List<ChirperDto> getShort(Collection<Long> chirperIds) {
+    public List<ChirperDto> getBasicInfo(Collection<Long> chirperIds) {
         return chirperMapper.selectList(new LambdaQueryWrapper<Chirper>()
-                        .select(Chirper::getId, Chirper::getAuthorId, Chirper::getText, Chirper::getMediaKeys)
+                        .select(Chirper::getId, Chirper::getAuthorId, Chirper::getType)
                         .in(Chirper::getId, chirperIds))
                 .stream()
                 .map(chirper -> chirperConvertor.pojoToDto(chirper))

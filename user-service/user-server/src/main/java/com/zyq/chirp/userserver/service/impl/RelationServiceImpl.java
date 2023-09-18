@@ -1,7 +1,8 @@
 package com.zyq.chirp.userserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.zyq.chirp.adviceclient.dto.MessageType;
+import com.zyq.chirp.adviceclient.dto.EntityType;
+import com.zyq.chirp.adviceclient.dto.EventType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.common.exception.ChirpException;
 import com.zyq.chirp.common.model.Code;
@@ -62,7 +63,12 @@ public class RelationServiceImpl implements RelationService {
                 new Timestamp(System.currentTimeMillis()),
                 RelationType.FOLLOWING.getRelation());
         relationMapper.replace(relation);
-        SiteMessageDto messageDto = new SiteMessageDto(fromId, toId, MessageType.FOLLOW.name());
+        SiteMessageDto messageDto = SiteMessageDto.builder()
+                .receiverId(toId)
+                .event(EventType.FOLLOW.name())
+                .entityType(EntityType.USER.name())
+                .senderId(fromId)
+                .build();
         producer.avoidRedundancySend(fromId + ":" + toId, followTopic, messageDto, Duration.ofHours(expire));
     }
 

@@ -1,6 +1,7 @@
 package com.zyq.chirp.adviceserver.mq.Assembler;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.zyq.chirp.adviceclient.dto.NoticeType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.adviceserver.service.InteractionMessageService;
 import jakarta.annotation.Resource;
@@ -31,10 +32,10 @@ public class UserMessageAssembler {
     public void receiver(@Payload List<SiteMessageDto> messageDtos, Acknowledgment ack) {
         messageDtos.forEach(messageDto -> {
             messageDto.setId(IdWorker.getId());
+            messageDto.setNoticeType(NoticeType.USER.name());
             messageDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
-            log.info("互动消息组装完成,类型为{},发送者为{},接收者为{}", messageDto.getType(), messageDto.getSenderId(), messageDto.getReceiverId());
             kafkaTemplate.send(interactionTopic + "-" + messageDto.getReceiverId(), messageDto);
-            ack.acknowledge();
         });
+        ack.acknowledge();
     }
 }

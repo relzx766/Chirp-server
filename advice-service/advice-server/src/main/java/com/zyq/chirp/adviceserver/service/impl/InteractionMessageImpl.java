@@ -1,9 +1,10 @@
 package com.zyq.chirp.adviceserver.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.adviceserver.convertor.MessageConvertor;
-import com.zyq.chirp.adviceserver.domain.pojo.InteractionMessage;
+import com.zyq.chirp.adviceserver.domain.pojo.Notification;
 import com.zyq.chirp.adviceserver.mapper.NoticeMessageMapper;
 import com.zyq.chirp.adviceserver.service.InteractionMessageService;
 import jakarta.annotation.Resource;
@@ -22,30 +23,30 @@ public class InteractionMessageImpl implements InteractionMessageService {
     /**
      * id由上游mq生成
      *
-     * @param interactionMessage
+     * @param notification
      */
     @Override
-    public void save(InteractionMessage interactionMessage) {
-        noticeMessageMapper.insertOne(interactionMessage);
+    public void save(Notification notification) {
+        noticeMessageMapper.insert(notification);
     }
 
     /**
      * id由上游mq生成
      *
-     * @param interactionMessages
+     * @param notifications
      */
     @Override
-    public void saveBatch(Collection<InteractionMessage> interactionMessages) {
-        System.out.println("插入消息到数据库....");
-        System.out.println(interactionMessages);
-        noticeMessageMapper.insertBatch(interactionMessages);
+    public void saveBatch(Collection<Notification> notifications) {
+        noticeMessageMapper.insertBatch(notifications);
     }
 
     @Override
     public List<SiteMessageDto> getByReceiverId(Long receiverId) {
-        return noticeMessageMapper.getByReceiverId(receiverId).stream()
-                .map(message -> messageConvertor.pojoToDto(message))
-                .toList();
+        return noticeMessageMapper.selectList(new LambdaQueryWrapper<Notification>()
+                        .eq(Notification::getReceiverId, receiverId)
+                        .orderByDesc(Notification::getCreateTime))
+                .stream()
+                .map(notification -> messageConvertor.pojoToDto(notification)).toList();
     }
 
     @Override
@@ -62,17 +63,17 @@ public class InteractionMessageImpl implements InteractionMessageService {
 
     @Override
     public void markAsRead(Long messageId, Long receiverId) {
-        noticeMessageMapper.update(null, new LambdaUpdateWrapper<InteractionMessage>()
-                .eq(InteractionMessage::getId, messageId)
-                .eq(InteractionMessage::getReceiverId, receiverId)
-                .set(InteractionMessage::getIsRead, true));
+        noticeMessageMapper.update(null, new LambdaUpdateWrapper<Notification>()
+                .eq(Notification::getId, messageId)
+                .eq(Notification::getReceiverId, receiverId)
+                .set(Notification::getIsRead, true));
     }
 
     @Override
     public void markAsRead(Collection<Long> messageIds, Long receiverId) {
-        noticeMessageMapper.update(null, new LambdaUpdateWrapper<InteractionMessage>()
-                .eq(InteractionMessage::getReceiverId, receiverId)
-                .in(InteractionMessage::getId, messageIds)
-                .set(InteractionMessage::getIsRead, true));
+        noticeMessageMapper.update(null, new LambdaUpdateWrapper<Notification>()
+                .eq(Notification::getReceiverId, receiverId)
+                .in(Notification::getId, messageIds)
+                .set(Notification::getIsRead, true));
     }
 }

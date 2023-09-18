@@ -205,7 +205,7 @@
            tc1.conversation_id,
            tc1.in_reply_to_user_id,
            tc1.create_time,
-           tc1.`text`,
+           tc1.`entity`,
            tc1.`type`,
            tc1.referenced_chirper_id,
            tc1.media_keys,
