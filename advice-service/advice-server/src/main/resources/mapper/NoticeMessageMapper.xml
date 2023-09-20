@@ -13,14 +13,15 @@
         <result property="createTime" column="create_time"/>
     </resultMap>
     <insert id="insertBatch">
-        replace into tb_site_message(id, sender_id, receiver_id, entity, entity_type, event, notice_type, create_time,
-        is_read)
+        replace into tb_site_message(id, sender_id, receiver_id, son_entity, entity, entity_type, event, notice_type,
+        create_time, is_read)
         values
 
         <foreach collection="messages" item="message" separator=",">
             (#{message.id},
             #{message.senderId},
             #{message.receiverId},
+            #{message.sonEntity},
             #{message.entity},
             #{message.entityType},
             #{message.event} ,

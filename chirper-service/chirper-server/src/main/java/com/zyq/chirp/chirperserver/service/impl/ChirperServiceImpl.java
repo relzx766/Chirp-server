@@ -11,6 +11,7 @@ import com.zyq.chirp.adviceclient.dto.EntityType;
 import com.zyq.chirp.adviceclient.dto.EventType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
+import com.zyq.chirp.chirperserver.aspect.ParseMentioned;
 import com.zyq.chirp.chirperserver.aspect.Statistic;
 import com.zyq.chirp.chirperserver.convertor.ChirperConvertor;
 import com.zyq.chirp.chirperserver.domain.enums.CacheKey;
@@ -28,6 +29,8 @@ import com.zyq.chirp.common.util.CacheUtil;
 import com.zyq.chirp.common.util.PageUtil;
 import com.zyq.chirp.mediaclient.client.MediaClient;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
+import com.zyq.chirp.userclient.client.UserClient;
+import com.zyq.chirp.userclient.dto.UserDto;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +43,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -54,6 +59,8 @@ public class ChirperServiceImpl implements ChirperService {
     ChirperConvertor chirperConvertor;
     @Resource
     MediaClient mediaClient;
+    @Resource
+    UserClient userClient;
     @Resource
     ObjectMapper objectMapper;
     @Resource
@@ -71,6 +78,7 @@ public class ChirperServiceImpl implements ChirperService {
     Integer expire = 6;
 
     @Override
+    @ParseMentioned
     public ChirperDto save(ChirperDto chirperDto) {
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
@@ -84,6 +92,7 @@ public class ChirperServiceImpl implements ChirperService {
     @Override
     @Transactional
     @Statistic(id = "#chirperDto.inReplyToChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
+    @ParseMentioned
     public ChirperDto reply(ChirperDto chirperDto) {
         if (null == chirperDto.getInReplyToChirperId()) {
             throw new ChirpException(Code.ERR_BUSINESS, "未提供回复对象");
@@ -100,13 +109,16 @@ public class ChirperServiceImpl implements ChirperService {
         if (!isInsert || !isSet) {
             throw new ChirpException(Code.ERR_BUSINESS, "回复失败");
         }
-        SiteMessageDto message = SiteMessageDto.builder()
-                .event(EventType.REPLY.name())
-                .entityType(EntityType.CHIRPER.name())
-                .senderId(chirper.getAuthorId())
-                .entity(String.valueOf(chirper.getInReplyToChirperId()))
-                .build();
-        chirperProducer.send(replyTopic, message);
+        CompletableFuture.runAsync(() -> {
+            SiteMessageDto message = SiteMessageDto.builder()
+                    .sonEntity(chirperDto.getInReplyToChirperId().toString())
+                    .entity(chirper.getId().toString())
+                    .event(EventType.REPLY.name())
+                    .entityType(EntityType.CHIRPER.name())
+                    .senderId(chirper.getAuthorId())
+                    .build();
+            chirperProducer.send(replyTopic, message);
+        });
         return chirperConvertor.pojoToDto(chirper);
     }
 
@@ -189,14 +201,16 @@ public class ChirperServiceImpl implements ChirperService {
                     .eq(Chirper::getAuthorId, userId)
                     .eq(Chirper::getType, ChirperType.FORWARD.name()));
         }
-        SiteMessageDto messageDto = SiteMessageDto.builder()
-                .entity(String.valueOf(chirperId))
-                .entityType(EntityType.CHIRPER.name())
-                .event(EventType.FORWARD.name())
-                .senderId(userId)
-                .build();
-        chirperProducer.avoidSend(CacheUtil.combineKey(CacheUtil.combineKey(chirperId, userId)),
-                forwardTopic, messageDto, Duration.ofHours(expire));
+        CompletableFuture.runAsync(() -> {
+            SiteMessageDto messageDto = SiteMessageDto.builder()
+                    .sonEntity(String.valueOf(chirperId))
+                    .entityType(EntityType.CHIRPER.name())
+                    .event(EventType.FORWARD.name())
+                    .senderId(userId)
+                    .build();
+            chirperProducer.avoidSend(CacheUtil.combineKey(CacheUtil.combineKey(chirperId, userId)),
+                    forwardTopic, messageDto, Duration.ofHours(expire));
+        });
     }
 
     @Override
@@ -217,6 +231,7 @@ public class ChirperServiceImpl implements ChirperService {
     @Override
     @Transactional
     @Statistic(id = "#chirperDto.referencedChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
+    @ParseMentioned
     public ChirperDto quote(ChirperDto chirperDto) {
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
@@ -232,12 +247,15 @@ public class ChirperServiceImpl implements ChirperService {
         if (!isInsert || !isSet) {
             throw new ChirpException(Code.ERR_BUSINESS, "发布失败");
         }
-        SiteMessageDto messageDto = SiteMessageDto.builder()
-                .entity(String.valueOf(chirperDto.getReferencedChirperId()))
-                .event(EventType.QUOTE.name())
-                .entityType(EntityType.CHIRPER.name())
-                .senderId(chirper.getAuthorId()).build();
-        chirperProducer.send(quoteTopic, messageDto);
+        CompletableFuture.runAsync(() -> {
+            SiteMessageDto messageDto = SiteMessageDto.builder()
+                    .sonEntity(chirperDto.getReferencedChirperId().toString())
+                    .entity(chirper.getId().toString())
+                    .event(EventType.QUOTE.name())
+                    .entityType(EntityType.CHIRPER.name())
+                    .senderId(chirper.getAuthorId()).build();
+            chirperProducer.send(quoteTopic, messageDto);
+        });
         return chirperConvertor.pojoToDto(chirper);
     }
 
@@ -406,35 +424,66 @@ public class ChirperServiceImpl implements ChirperService {
 
     @Override
     public List<ChirperDto> combineWithMedia(Collection<ChirperDto> chirperDtos) {
-        if (chirperDtos == null || chirperDtos.isEmpty()) {
-            return new ArrayList<>(chirperDtos);
-        }
-        Map<Long, List<Integer>> map = chirperDtos.stream()
-                .map(chirperDto -> {
-                    try {
-                        //递归获取引用推文的媒体信息
-                        if (chirperDto.getReferenced() != null) {
-                            chirperDto.setReferenced(this.combineWithMedia(List.of(chirperDto.getReferenced())).get(0));
+        try {
+            if (chirperDtos == null || chirperDtos.isEmpty()) {
+                return new ArrayList<>(chirperDtos);
+            }
+            //提取出所有的媒体信息
+            Map<Long, List<Integer>> map = chirperDtos.stream()
+                    .map(chirperDto -> {
+                        try {
+                            //递归获取引用推文的媒体信息
+                            if (chirperDto.getReferenced() != null) {
+                                chirperDto.setReferenced(this.combineWithMedia(List.of(chirperDto.getReferenced())).get(0));
+                            }
+                            List<Integer> mediaKeys = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
+                            });
+                            return Map.entry(chirperDto.getId(), mediaKeys);
+                        } catch (JsonProcessingException | IllegalArgumentException e) {
+                            log.warn("媒体key转换失败;{}", e.getMessage());
+                            return Map.entry(chirperDto.getId(), List.<Integer>of());
                         }
-                        List<Integer> mediaKeys = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
-                        });
-                        return Map.entry(chirperDto.getId(), mediaKeys);
-                    } catch (JsonProcessingException | IllegalArgumentException e) {
-                        log.warn("媒体key转换失败;{}", e.getMessage());
-                        return Map.entry(chirperDto.getId(), List.<Integer>of());
-                    }
-                }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        Map<Long, List<MediaDto>> mediaMap = mediaClient.getCombine(map).getBody();
-        if (mediaMap != null && !mediaMap.isEmpty()) {
+                    }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            List<Long> userIds = chirperDtos.stream().map(ChirperDto::getAuthorId).toList();
+            //获取所有的用户信息
+            CompletableFuture<Map<Long, UserDto>> userFuture = CompletableFuture.supplyAsync(() ->
+                    userClient.getShort(userIds).getBody().stream().collect(Collectors.toMap(UserDto::getId, Function.identity()))
+            ).exceptionally(throwable -> {
+                throwable.printStackTrace();
+                return Map.of();
+            });
+            //获取所有媒体信息
+            CompletableFuture<Map<Long, List<MediaDto>>> mediaFuture = CompletableFuture.supplyAsync(() ->
+                    mediaClient.getCombine(map).getBody()
+            ).exceptionally(throwable -> {
+                throwable.printStackTrace();
+                return Map.of();
+            });
+            //等待线程完成
+            CompletableFuture<Void> allOf = CompletableFuture.allOf(userFuture, mediaFuture);
+            allOf.join();
+            Map<Long, List<MediaDto>> mediaMap = mediaFuture.get();
+            Map<Long, UserDto> userDtoMap = userFuture.get();
+
             chirperDtos.forEach(chirperDto -> {
                 try {
-                    String json = objectMapper.writeValueAsString(mediaMap.get(chirperDto.getId()));
-                    chirperDto.setMediaKeys(json);
+                    if (mediaMap != null && !mediaMap.isEmpty()) {
+                        String json = objectMapper.writeValueAsString(mediaMap.get(chirperDto.getId()));
+                        chirperDto.setMediaKeys(json);
+                    }
+                    if (userDtoMap != null && !userDtoMap.isEmpty()) {
+                        UserDto userDto = userDtoMap.get(chirperDto.getAuthorId());
+                        chirperDto.setUsername(userDto.getUsername());
+                        chirperDto.setNickname(userDto.getNickname());
+                        chirperDto.setAvatar(userDto.getSmallAvatarUrl());
+                    }
                 } catch (JsonProcessingException e) {
                     log.warn("媒体值转换为json失败{}", e.getMessage());
                     chirperDto.setMediaKeys("");
                 }
             });
+        } catch (ExecutionException | InterruptedException e) {
+            throw new ChirpException(e);
         }
         return new ArrayList<>(chirperDtos);
     }

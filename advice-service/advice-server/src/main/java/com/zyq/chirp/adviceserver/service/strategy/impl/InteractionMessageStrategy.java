@@ -78,16 +78,14 @@ public class InteractionMessageStrategy implements MessageStrategy {
             List<Long> chirperIds = new ArrayList<>();
             List<Long> senderIds = new ArrayList<>();
             messageDtos.forEach(messageDto -> {
-                System.out.println("11111111");
-                System.out.println(messageDto);
-                chirperIds.add(Long.parseLong(messageDto.getEntity()));
+                Long sonEntityId = messageDto.getSonEntity() != null ? Long.parseLong(messageDto.getSonEntity()) : null;
+                Long entityId = messageDto.getEntity() != null ? Long.parseLong(messageDto.getEntity()) : null;
+                chirperIds.add(sonEntityId);
+                chirperIds.add(entityId);
                 senderIds.add(messageDto.getSenderId());
             });
             CompletableFuture<List<ChirperDto>> chirperFuture = CompletableFuture.supplyAsync(() ->
-                    {
-                        System.out.println("22222222222222");
-                        return chirperClient.getContent(chirperIds).getBody();
-                    }
+                    chirperClient.getContent(chirperIds).getBody()
             ).exceptionally(throwable -> {
                 throwable.printStackTrace();
                 return List.of();
@@ -106,8 +104,10 @@ public class InteractionMessageStrategy implements MessageStrategy {
                     .stream().collect(Collectors.toMap(UserDto::getId, Function.identity()));
             messageDtos.forEach(messageDto -> {
                 try {
-                    Long chirperId = Long.parseLong(messageDto.getEntity());
-                    messageDto.setEntity(objectMapper.writeValueAsString(chirperMap.get(chirperId)));
+                    Long sonEntityId = messageDto.getSonEntity() != null ? Long.parseLong(messageDto.getSonEntity()) : null;
+                    Long entityId = messageDto.getEntity() != null ? Long.parseLong(messageDto.getEntity()) : null;
+                    messageDto.setEntity(objectMapper.writeValueAsString(chirperMap.get(entityId)));
+                    messageDto.setSonEntity(objectMapper.writeValueAsString(chirperMap.get(sonEntityId)));
                     UserDto sender = userMap.get(messageDto.getSenderId());
                     messageDto.setSenderName(sender.getNickname());
                     messageDto.setSenderAvatar(sender.getSmallAvatarUrl());

@@ -79,6 +79,7 @@ mq:
       forward: FORWARD
       quote: QUOTE
       reply: REPLY
+      mentioned: MENTIONED
       interaction: interaction
 server:
   port: 8084

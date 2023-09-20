@@ -18,6 +18,8 @@ public class Notification extends Message {
     private Long senderId;
 
     private Long receiverId;
+    private String sonEntity;
+
     private String entity;
     private String entityType;
 

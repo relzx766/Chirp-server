@@ -13,6 +13,7 @@ public interface UserService {
 
     UserDto getById(Long userId, Long currentUserId);
 
+    UserDto getByUsername(String username, Long currentUserId);
 
     UserDto getDetailByEmail(String email);
 
@@ -27,4 +28,6 @@ public interface UserService {
     List<UserDto> search(String keyword, Long currentUserId, Integer page);
 
     List<UserDto> getBasicInfo(Collection<Long> userIds);
+
+    List<Long> getIdByUsername(Collection<String> username);
 }

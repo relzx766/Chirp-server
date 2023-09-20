@@ -72,11 +72,11 @@ mq:
   topic:
     chirper-delay-post: chirper-delay-post
     site-message:
-      relation: RELA
       like: LIKE
       forward: FORWARD
       quote: QUOTE
       reply: REPLY
+      mentioned: MENTIONED
 server:
   port: 8083
   page-size: 10

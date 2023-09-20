@@ -41,11 +41,11 @@ public class ChirperMessageAssembler {
     ObjectMapper objectMapper;
 
     @KafkaListener(topics = {"${mq.topic.site-message.like}", "${mq.topic.site-message.forward}",
-            "${mq.topic.site-message.quote}", "${mq.topic.site-message.reply}"},
+            "${mq.topic.site-message.quote}", "${mq.topic.site-message.reply}", "${mq.topic.site-message.mentioned}"},
             groupId = "${mq.consumer.group.pre-interaction}",
             batch = "true", concurrency = "4")
     public void receiver(@Payload List<SiteMessageDto> messageDtos, Acknowledgment ack) {
-        List<Long> chirperIds = messageDtos.stream().map(messageDto -> Long.parseLong(messageDto.getEntity())).toList();
+        List<Long> chirperIds = messageDtos.stream().map(messageDto -> Long.parseLong(messageDto.getSonEntity())).toList();
         if (!chirperIds.isEmpty()) {
             Map<Long, ChirperDto> chirperDtoMap;
             List<ChirperDto> chirperDtoList = chirperClient.getBasicInfo(chirperIds).getBody();
@@ -53,13 +53,21 @@ public class ChirperMessageAssembler {
                 chirperDtoMap = chirperDtoList.stream()
                         .collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
                 //转换为详细信息后发送
-                messageDtos.forEach(siteMessage -> {
-                    siteMessage.setId(IdWorker.getId());
-                    siteMessage.setReceiverId(chirperDtoMap.get(Long.parseLong(siteMessage.getEntity())).getAuthorId());
-                    siteMessage.setNoticeType(NoticeType.USER.name());
-                    siteMessage.setCreateTime(new Timestamp(System.currentTimeMillis()));
-                    kafkaTemplate.send(interactionTopic + "-" + siteMessage.getReceiverId(), siteMessage);
-                });
+                for (SiteMessageDto messageDto : messageDtos) {
+                    messageDto.setId(IdWorker.getId());
+                    if (messageDto.getReceiverId() == null) {
+                        Long receiver = chirperDtoMap.get(Long.parseLong(messageDto.getSonEntity())).getAuthorId();
+                        messageDto.setReceiverId(receiver);
+                    }
+                    //过滤掉自己给自己的互动消息
+                    if (messageDto.getSenderId().equals(messageDto.getReceiverId())) {
+                        continue;
+                    }
+
+                    messageDto.setNoticeType(NoticeType.USER.name());
+                    messageDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
+                    kafkaTemplate.send(interactionTopic + "-" + messageDto.getReceiverId(), messageDto);
+                }
             }
         }
         ack.acknowledge();

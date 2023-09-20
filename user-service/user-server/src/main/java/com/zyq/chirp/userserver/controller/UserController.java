@@ -5,11 +5,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.userclient.dto.UserDto;
 import com.zyq.chirp.userserver.service.UserService;
+import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collection;
 import java.util.List;
 
 @RestController
@@ -38,13 +40,18 @@ public class UserController {
         return ResponseEntity.ok(null);
     }
 
-    @GetMapping("/profile/{id}")
-    public ResponseEntity<UserDto> getProfile(@PathVariable("id") Long userId) {
+    @GetMapping("/profile/{account}")
+    public ResponseEntity<UserDto> getProfile(@PathVariable("account") String account,
+                                              @Nullable @RequestParam("type") String type) {
         Long currentUserId = null;
         if (StpUtil.isLogin()) {
             currentUserId = StpUtil.getLoginIdAsLong();
         }
-        return ResponseEntity.ok(userService.getById(userId, currentUserId));
+
+        if (type != null) {
+            return ResponseEntity.ok(userService.getByUsername(account, currentUserId));
+        }
+        return ResponseEntity.ok(userService.getById(Long.parseLong(account), currentUserId));
     }
 
 
@@ -76,5 +83,10 @@ public class UserController {
     @PostMapping("/basic_info")
     public ResponseEntity<List<UserDto>> getBasicInfo(@RequestParam("ids") List<Long> userIds) {
         return ResponseEntity.ok(userService.getBasicInfo(userIds));
+    }
+
+    @PostMapping("/id_info")
+    public ResponseEntity<List<Long>> getIdByUsername(@RequestParam("username") Collection<String> username) {
+        return ResponseEntity.ok(userService.getIdByUsername(username));
     }
 }

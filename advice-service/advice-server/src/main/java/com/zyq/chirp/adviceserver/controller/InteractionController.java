@@ -54,7 +54,6 @@ public class InteractionController {
         webSocketSet.add(this);
         sessionPool.put(userId, session);
         List<SiteMessageDto> messages = interactionMessageService.getByReceiverId(userId);
-        System.out.println(messages);
         new MessageContext(messageStrategy).send(messages, session, userId);
     }
 

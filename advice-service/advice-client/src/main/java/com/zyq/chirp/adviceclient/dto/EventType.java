@@ -22,6 +22,10 @@ public enum EventType {
      */
     FOLLOW,
     /**
+     * 提及
+     */
+    MENTIONED,
+    /**
      * 公告
      */
     ANNOUNCEMENT,

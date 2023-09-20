@@ -5,6 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collection;
 import java.util.List;
 
 @FeignClient("user-server")
@@ -24,4 +25,7 @@ public interface UserClient {
 
     @PostMapping("/user/basic_info")
     ResponseEntity<List<UserDto>> getShort(@RequestParam("ids") List<Long> userIds);
+
+    @PostMapping("/user/id_info")
+    ResponseEntity<List<Long>> getIdByUsername(@RequestParam("username") Collection<String> username);
 }

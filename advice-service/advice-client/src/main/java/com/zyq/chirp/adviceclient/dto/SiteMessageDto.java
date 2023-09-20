@@ -18,6 +18,7 @@ public class SiteMessageDto {
     private String senderAvatar;
 
     private Long receiverId;
+    private String sonEntity;
     private String entity;
     private String entityType;
 

@@ -35,6 +35,7 @@ public class NoticeConsumer {
         List<Notification> notifications = messageDtos.stream()
                 .map(messageDto -> messageConvertor.dtoToPojo(messageDto))
                 .toList();
+        System.out.println(notifications);
         interactionMessageService.saveBatch(notifications);
         log.info("写入完成，开始提交偏移量");
         ack.acknowledge();

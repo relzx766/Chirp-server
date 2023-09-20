@@ -60,7 +60,7 @@ public class LikeServiceImpl implements LikeService {
             throw new ChirpException(Code.ERR_BUSINESS, "重复点赞");
         }
         SiteMessageDto siteMessageDto = SiteMessageDto.builder()
-                .entity(String.valueOf(likeDto.getChirperId()))
+                .sonEntity(String.valueOf(likeDto.getChirperId()))
                 .event(EventType.LIKE.name())
                 .entityType(EntityType.CHIRPER.name())
                 .senderId(likeDto.getUserId())

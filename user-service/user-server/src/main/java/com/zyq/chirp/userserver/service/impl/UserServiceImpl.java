@@ -95,6 +95,20 @@ public class UserServiceImpl implements UserService {
         return userConvertor.voToDto(userVo);
     }
 
+    @Override
+    public UserDto getByUsername(String username, Long currentUserId) {
+        if (username == null || username.trim().isEmpty()) {
+            throw new ChirpException(Code.ERR_BUSINESS, "未提供用户信息");
+        }
+        UserVo userVo = userMapper.getByUsername(username);
+        userVo.setRelation(RelationType.UNFOLLOWED.getRelation());
+        if (currentUserId != null) {
+            Optional.ofNullable(relationService.getRelationType(currentUserId, userVo.getId()))
+                    .ifPresent(relation -> userVo.setRelation(relation.getStatus()));
+        }
+        return userConvertor.voToDto(userVo);
+    }
+
     /**
      * 获取用户主页，包含用户基本信息和与当前用户的关系
      *
@@ -200,5 +214,12 @@ public class UserServiceImpl implements UserService {
                 .stream()
                 .map(user -> userConvertor.pojoToDto(user))
                 .toList();
+    }
+
+    @Override
+    public List<Long> getIdByUsername(Collection<String> username) {
+        return userMapper.selectList(new LambdaQueryWrapper<User>()
+                .select(User::getId)
+                .in(User::getUsername, username)).stream().map(User::getId).toList();
     }
 }

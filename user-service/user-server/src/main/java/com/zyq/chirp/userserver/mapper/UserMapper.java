@@ -43,4 +43,16 @@ public interface UserMapper extends BaseMapper<User> {
             """)
     UserVo getById(Long id);
 
+    @Select("""
+            select tu.id, tu.username,tu.nickname,
+             tu.email, tu.birthday, tu.gender, tu.create_time, tu.description,
+              tu.profile_back_url, tu.small_avatar_url, tu.medium_avatar_url, tu.large_avatar_url, tu.status,
+              count(tr1.to_id)as follow_num,count(tr2.from_id) as following_num
+             from tb_user  tu left join tb_relation tr1 on tr1.to_id=tu.id
+             left join tb_relation tr2 on tr2.from_id=tu.id
+            where tu.username=#{username} and tu.status=1 or tu.status=3
+            group by tu.id
+            """)
+    UserVo getByUsername(String username);
+
 }
