@@ -79,7 +79,10 @@ mq:
       mentioned: MENTIONED
 server:
   port: 8083
+default-config:
   page-size: 10
   per-save-like-size: 20
+
 sa-token:
   token-name: Authorization
+

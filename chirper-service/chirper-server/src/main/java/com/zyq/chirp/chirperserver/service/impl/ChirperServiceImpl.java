@@ -37,6 +37,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,6 +67,8 @@ public class ChirperServiceImpl implements ChirperService {
     ObjectMapper objectMapper;
     @Resource
     ChirperProducer<SiteMessageDto> chirperProducer;
+    @Resource
+    RedisTemplate<String, Object> redisTemplate;
     @Value("${default-config.page-size}")
     Integer pageSize;
     @Value("${mq.topic.site-message.forward}")
@@ -273,6 +277,7 @@ public class ChirperServiceImpl implements ChirperService {
 
 
     @Override
+    @ParseMentioned
     public List<ChirperDto> getById(Collection<Long> chirperIds) {
         Map<Long, ChirperDto> chirperDtoMap = chirperMapper.selectList(new LambdaQueryWrapper<Chirper>()
                         .in(Chirper::getId, chirperIds)
@@ -346,12 +351,20 @@ public class ChirperServiceImpl implements ChirperService {
     @Cacheable(value = "chirper:search#2", key = "#keyword+':'+#page+':'+#isMedia")
     public List<ChirperDto> search(String keyword, Integer page, Boolean isMedia) {
         int offset = PageUtil.getOffset(page, pageSize);
+
         return Optional.ofNullable(keyword)
                 .map(matchWord -> {
-                    Map<Long, ChirperDto> chirperDtoMap = chirperMapper.getMatchLimit(keyword,
-                                    offset,
-                                    pageSize,
-                                    isMedia)
+                    Page<Chirper> searchPage = new Page<>(page, pageSize);
+                    searchPage.setSearchCount(false);
+                    LambdaQueryWrapper<Chirper> wrapper = new LambdaQueryWrapper<Chirper>()
+                            .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
+                            .orderByDesc(Chirper::getCreateTime)
+                            .like(Chirper::getText, keyword);
+                    if (isMedia) {
+                        wrapper.apply("JSON_LENGTH(media_keys)<>0");
+                    }
+                    Map<Long, ChirperDto> chirperDtoMap = chirperMapper.selectPage(searchPage, wrapper)
+                            .getRecords()
                             .stream()
                             .map(chirper -> chirperConvertor.pojoToDto(chirper))
                             .collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
@@ -369,7 +382,7 @@ public class ChirperServiceImpl implements ChirperService {
                     }
                     return this.combineWithMedia(chirperDtoMap.values());
                 })
-                .orElse(List.<ChirperDto>of());
+                .orElse(List.of());
     }
 
     @Override
@@ -486,5 +499,29 @@ public class ChirperServiceImpl implements ChirperService {
             throw new ChirpException(e);
         }
         return new ArrayList<>(chirperDtos);
+    }
+
+    @Override
+    public Map<Object, Map<String, Object>> getTrend(Integer page) {
+        try {
+            int offset = PageUtil.getOffset(page, pageSize);
+            ZSetOperations<String, Object> opsForZSet = redisTemplate.opsForZSet();
+            Set<ZSetOperations.TypedTuple<Object>> tend = opsForZSet.reverseRangeWithScores(
+                    CacheKey.TEND_TAG_BOUND_KEY.getKey(), offset, (long) page * pageSize);
+            Map<Object, Map<String, Object>> tendMap = new LinkedHashMap<>();
+            tend.forEach(tuple -> {
+                Map<String, Object> trend = new HashMap<>();
+                trend.put("score", tuple.getScore());
+                Double score = opsForZSet.score(CacheKey.TEND_POST_BOUND_KEY.getKey(), tuple.getValue());
+                if (score != null) {
+                    trend.put("post", score);
+                }
+                tendMap.put(tuple.getValue(), trend);
+            });
+            return tendMap;
+        } catch (NullPointerException e) {
+            throw new ChirpException(Code.ERR_BUSINESS, "没有相关数据");
+        }
+
     }
 }

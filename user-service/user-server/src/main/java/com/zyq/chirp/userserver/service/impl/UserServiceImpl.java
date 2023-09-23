@@ -3,6 +3,7 @@ package com.zyq.chirp.userserver.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zyq.chirp.common.exception.ChirpException;
 import com.zyq.chirp.common.model.Code;
 import com.zyq.chirp.userclient.dto.UserDto;
@@ -185,16 +186,33 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public List<UserDto> search(String keyword, Long currentUserId, Integer page) {
-        page = Optional.ofNullable(page).orElse(1);
-        int currentIndex = (page - 1) * pageSize;
-        List<UserDto> userDtos = userMapper.matchUserByKeyword(keyword, AccountStatus.INACTIVE.getStatus(), currentIndex, pageSize).stream()
+        Page<User> userPage = new Page<>(page, pageSize);
+        userPage.setSearchCount(false);
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>();
+        if (currentUserId != null) {
+            wrapper.ne(User::getId, currentUserId);
+        }
+        wrapper
+                .eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
+                .like(User::getNickname, keyword)
+                .or()
+                .like(User::getUsername, keyword);
+
+        List<UserDto> userDtos = userMapper.selectPage(userPage, wrapper
+                )
+                .getRecords()
+                .stream()
                 .map(user -> userConvertor.pojoToDto(user)).toList();
-        List<Long> userIds = userDtos.stream().map(UserDto::getId).toList();
-        if (Objects.nonNull(currentUserId)) {
+        if (Objects.nonNull(currentUserId) && !userDtos.isEmpty()) {
+            List<Long> userIds = userDtos.stream().map(UserDto::getId).toList();
             Map<Long, Integer> relationMap = relationService.getUserRelation(userIds, currentUserId)
                     .stream()
                     .collect(Collectors.toMap(Relation::getToId, Relation::getStatus));
-            userDtos.forEach(userDto -> userDto.setRelation(relationMap.get(userDto.getId())));
+            userDtos.forEach(userDto -> {
+                Integer type = relationMap.get(userDto.getId());
+                type = type != null ? type : RelationType.UNFOLLOWED.getRelation();
+                userDto.setRelation(type);
+            });
         }
         return userDtos;
     }

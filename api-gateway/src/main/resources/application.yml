@@ -99,3 +99,4 @@ default-config:
         - /advice-service/interaction/**
         - /user-service/user/profile/**
         - /chirper-service/chirper/author/**
+        - /chirper-service/chirper/trend/**

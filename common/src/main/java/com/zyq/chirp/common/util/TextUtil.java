@@ -15,4 +15,26 @@ public class TextUtil {
         }
         return str;
     }
+
+    public static List<String> findTags(String text) {
+        Pattern pattern = Pattern.compile("#[^#\\s]+");
+        Matcher matcher = pattern.matcher(text);
+        List<String> str = new ArrayList<>();
+        while (matcher.find()) {
+            str.add(matcher.group());
+        }
+        return str;
+    }
+
+    public static List<String> findTags(List<String> text) {
+        Pattern pattern = Pattern.compile("#[^#\\s]+");
+        List<String> str = new ArrayList<>();
+        text.forEach(content -> {
+            Matcher matcher = pattern.matcher(content);
+            while (matcher.find()) {
+                str.add(matcher.group());
+            }
+        });
+        return str;
+    }
 }

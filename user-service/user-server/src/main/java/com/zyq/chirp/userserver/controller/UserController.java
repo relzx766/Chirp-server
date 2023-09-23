@@ -70,7 +70,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getDetailByUsername(username));
     }
 
-    @PostMapping("/search/{page}")
+    @GetMapping("/search/{page}")
     public ResponseEntity<List<UserDto>> search(@PathVariable("page") Integer page,
                                                 @RequestParam("keyword") String keyword) {
         Long currentUserId = null;

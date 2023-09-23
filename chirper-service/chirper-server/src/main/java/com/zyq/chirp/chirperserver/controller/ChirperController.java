@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/chirper")
@@ -156,5 +157,8 @@ public class ChirperController {
         return ResponseEntity.ok(chirperService.getById(ids));
     }
 
-
+    @GetMapping("/trend/{page}")
+    public ResponseEntity<Map<Object, Map<String, Object>>> getTrend(@PathVariable("page") Integer page) {
+        return ResponseEntity.ok(chirperService.getTrend(page));
+    }
 }

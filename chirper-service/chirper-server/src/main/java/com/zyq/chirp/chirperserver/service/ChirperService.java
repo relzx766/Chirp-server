@@ -90,4 +90,5 @@ public interface ChirperService {
 
     List<ChirperDto> combineWithMedia(Collection<ChirperDto> chirperDtos);
 
+    Map<Object, Map<String, Object>> getTrend(Integer page);
 }
