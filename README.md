@@ -5,6 +5,7 @@
 
 ### 系统环境
 
+jdk 21<br>
 nacos 2.2.3 <br>
 nginx 1.24.0 <br>
 kafka 3.5.0 <br>

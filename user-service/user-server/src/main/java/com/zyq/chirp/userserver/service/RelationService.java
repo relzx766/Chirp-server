@@ -15,6 +15,8 @@ public interface RelationService {
 
     Long getFollowerCount(Long userId);
 
+    Long getFollowingCount(Long userId);
+
     void follow(Long fromId, Long toId);
 
     void unfollow(Long fromId, Long toId);

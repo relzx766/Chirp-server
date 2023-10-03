@@ -15,6 +15,7 @@ import com.zyq.chirp.userserver.model.pojo.Relation;
 import com.zyq.chirp.userserver.service.RelationService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
+@CacheConfig(cacheNames = "relation")
 public class RelationServiceImpl implements RelationService {
     @Resource
     RelationMapper relationMapper;
@@ -70,6 +72,12 @@ public class RelationServiceImpl implements RelationService {
     public Long getFollowerCount(Long userId) {
         return relationMapper.selectCount(new LambdaQueryWrapper<Relation>()
                 .eq(Relation::getToId, userId));
+    }
+
+    @Override
+    public Long getFollowingCount(Long userId) {
+        return relationMapper.selectCount(new LambdaQueryWrapper<Relation>()
+                .eq(Relation::getFromId, userId));
     }
 
 

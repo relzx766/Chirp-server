@@ -13,12 +13,13 @@ import com.zyq.chirp.userserver.model.enumeration.AccountStatus;
 import com.zyq.chirp.userserver.model.enumeration.RelationType;
 import com.zyq.chirp.userserver.model.pojo.Relation;
 import com.zyq.chirp.userserver.model.pojo.User;
-import com.zyq.chirp.userserver.model.vo.UserVo;
 import com.zyq.chirp.userserver.service.RelationService;
 import com.zyq.chirp.userserver.service.UserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@CacheConfig(cacheNames = "user#5")
 public class UserServiceImpl implements UserService {
     @Resource
     private UserMapper userMapper;
@@ -81,33 +83,43 @@ public class UserServiceImpl implements UserService {
      * @return
      */
     @Override
+    @Cacheable(key = "'profile:'+#userId")
     public UserDto getById(Long userId, Long currentUserId) {
         if (Objects.isNull(userId)) {
             throw new ChirpException(Code.ERR_BUSINESS, "对象用户为空");
         }
-        UserVo userVo = userMapper.getById(userId);
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getId, userId));
+        UserDto userDto = userConvertor.pojoToDto(user);
+        userDto.setFollowNum(Math.toIntExact(relationService.getFollowerCount(userId)));
+        userDto.setFollowingNum(Math.toIntExact(relationService.getFollowingCount(userId)));
         if (currentUserId != null) {
-            userVo.setRelation(RelationType.UNFOLLOWED.getRelation());
+            userDto.setRelation(RelationType.UNFOLLOWED.getRelation());
             Relation relation = relationService.getRelationType(currentUserId, userId);
             if (relation != null) {
-                userVo.setRelation(relation.getStatus());
+                userDto.setRelation(relation.getStatus());
             }
         }
-        return userConvertor.voToDto(userVo);
+        return userDto;
     }
 
     @Override
+    @Cacheable(key = "'profile:'+#username")
     public UserDto getByUsername(String username, Long currentUserId) {
         if (username == null || username.trim().isEmpty()) {
             throw new ChirpException(Code.ERR_BUSINESS, "未提供用户信息");
         }
-        UserVo userVo = userMapper.getByUsername(username);
-        userVo.setRelation(RelationType.UNFOLLOWED.getRelation());
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        UserDto userDto = userConvertor.pojoToDto(user);
+        userDto.setFollowNum(Math.toIntExact(relationService.getFollowerCount(userDto.getId())));
+        userDto.setFollowingNum(Math.toIntExact(relationService.getFollowingCount(userDto.getId())));
         if (currentUserId != null) {
-            Optional.ofNullable(relationService.getRelationType(currentUserId, userVo.getId()))
-                    .ifPresent(relation -> userVo.setRelation(relation.getStatus()));
+            userDto.setRelation(RelationType.UNFOLLOWED.getRelation());
+            Relation relation = relationService.getRelationType(currentUserId, userDto.getId());
+            if (relation != null) {
+                userDto.setRelation(relation.getStatus());
+            }
         }
-        return userConvertor.voToDto(userVo);
+        return userDto;
     }
 
     /**
