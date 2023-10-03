@@ -18,7 +18,7 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: com.zyq.chirp.adviceserver.domain,com.zyq.chirp.chirpclient.dto,com.zyq.chirp.userclient.dto,com.zyq.chirp.adviceclient.dto
+        spring.json.trusted.packages: com.zyq.chirp.adviceserver.domain,com.zyq.chirp.chirpclient.dto,com.zyq.chirp.userclient.dto,com.zyq.chirp.adviceclient.dto,com.zyq.chirp.feedclient.dto,com.zyq.chirp.common.mq
     producer:
       # 发生错误后，消息重发的次数。
       retries: 0
@@ -71,8 +71,12 @@ mq:
     group:
       pre-interaction: advice_pre_interaction_consumer
       interaction: advice_interaction_consumer
+      tweeted: advice_tweeted_consumer
   topic:
-    chirper-delay-post: chirper-delay-post
+    tweeted: tweeted
+    # 通知关注者已更新的topic
+    socket-connect: socket-connect
+    socket-disconnect: socket-disconnect
     site-message:
       follow: FOLLOW
       like: LIKE
@@ -81,6 +85,9 @@ mq:
       reply: REPLY
       mentioned: MENTIONED
       interaction: interaction
+      tweeted-advice: tweeted-advice
+default-config:
+  follower-query-size: 1000
 server:
   port: 8084
 

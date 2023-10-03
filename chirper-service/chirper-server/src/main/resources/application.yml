@@ -70,6 +70,7 @@ mybatis-plus:
 
 mq:
   topic:
+    publish: publish
     chirper-delay-post: chirper-delay-post
     site-message:
       like: LIKE

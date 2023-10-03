@@ -279,13 +279,16 @@ public class ChirperServiceImpl implements ChirperService {
     @Override
     @ParseMentioned
     public List<ChirperDto> getById(Collection<Long> chirperIds) {
+        if (chirperIds == null || chirperIds.isEmpty()) {
+            throw new ChirpException(Code.ERR_BUSINESS, "未提供id");
+        }
         Map<Long, ChirperDto> chirperDtoMap = chirperMapper.selectList(new LambdaQueryWrapper<Chirper>()
                         .in(Chirper::getId, chirperIds)
                         .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
                         .orderByDesc(Chirper::getCreateTime))
                 .stream()
                 .map(chirper -> chirperConvertor.pojoToDto(chirper))
-                .collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
+                .collect(Collectors.toMap(ChirperDto::getId, Function.identity(), (k1, k2) -> k1, LinkedHashMap::new));
         Map<Long, Long> referMap = chirperDtoMap.values().stream()
                 .filter(chirperDto -> ChirperType.QUOTE.name().equals(chirperDto.getType()))
                 .collect(Collectors.toMap(ChirperDto::getId, ChirperDto::getReferencedChirperId));
@@ -502,26 +505,46 @@ public class ChirperServiceImpl implements ChirperService {
     }
 
     @Override
-    public Map<Object, Map<String, Object>> getTrend(Integer page) {
+    public Map<Object, Map<String, Object>> getTrend(Integer page, String type) {
         try {
             int offset = PageUtil.getOffset(page, pageSize);
             ZSetOperations<String, Object> opsForZSet = redisTemplate.opsForZSet();
             Set<ZSetOperations.TypedTuple<Object>> tend = opsForZSet.reverseRangeWithScores(
                     CacheKey.TEND_TAG_BOUND_KEY.getKey(), offset, (long) page * pageSize);
             Map<Object, Map<String, Object>> tendMap = new LinkedHashMap<>();
-            tend.forEach(tuple -> {
-                Map<String, Object> trend = new HashMap<>();
-                trend.put("score", tuple.getScore());
-                Double score = opsForZSet.score(CacheKey.TEND_POST_BOUND_KEY.getKey(), tuple.getValue());
-                if (score != null) {
-                    trend.put("post", score);
-                }
-                tendMap.put(tuple.getValue(), trend);
-            });
+            if (tend != null && !tend.isEmpty()) {
+                tend.forEach(tuple -> {
+                    if (tuple.getValue() != null) {
+                        Map<String, Object> trend = new HashMap<>();
+                        trend.put("score", tuple.getScore());
+                        Double score = opsForZSet.score(CacheKey.TEND_POST_BOUND_KEY.getKey(), tuple.getValue());
+                        if (score != null) {
+                            trend.put("post", score);
+                        }
+                        tendMap.put(tuple.getValue(), trend);
+                    }
+
+                });
+            }
             return tendMap;
         } catch (NullPointerException e) {
             throw new ChirpException(Code.ERR_BUSINESS, "没有相关数据");
         }
 
     }
+
+    @Override
+    public Map<Long, List<Long>> getAllIdByAuthors(Collection<Long> userIds) {
+        List<Chirper> chirpers = chirperMapper.selectList(new LambdaQueryWrapper<Chirper>()
+                .select(Chirper::getId, Chirper::getAuthorId)
+                .in(Chirper::getAuthorId, userIds));
+        if (!chirpers.isEmpty()) {
+            return chirpers.stream()
+                    .collect(Collectors.groupingBy(
+                            Chirper::getAuthorId, Collectors.mapping(Chirper::getId, Collectors.toList())));
+        }
+        return Map.of();
+    }
+
+
 }

@@ -71,6 +71,7 @@ mq:
   topic:
     site-message:
       follow: FOLLOW
+  unfollow: unfollow
 server:
   port: 8081
 sa-token:

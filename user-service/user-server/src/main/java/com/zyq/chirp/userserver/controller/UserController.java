@@ -89,4 +89,5 @@ public class UserController {
     public ResponseEntity<List<Long>> getIdByUsername(@RequestParam("username") Collection<String> username) {
         return ResponseEntity.ok(userService.getIdByUsername(username));
     }
+
 }

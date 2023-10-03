@@ -47,11 +47,13 @@ public class InteractionMessageStrategy implements MessageStrategy {
     @Resource
     UserClient userClient;
     @Resource
-    Map<String, KafkaMessageListenerContainer> containerMap;
+    Map<String, List<KafkaMessageListenerContainer>> containerMap;
     @Value("${mq.topic.site-message.interaction}")
     String topicSuffix;
     @Value("${mq.consumer.group.interaction}")
     String group;
+    @Value("${mq.topic.site-message.tweeted-advice}")
+    String tweeted;
 
     /**
      * 推送站内信
@@ -63,14 +65,23 @@ public class InteractionMessageStrategy implements MessageStrategy {
 
     @SneakyThrows
     public void send(List<SiteMessageDto> messageDtos, Session session, Long userId) {
-        KafkaMessageListenerContainer<String, SiteMessageDto> container = kafkaContainerConfig.getListenerContainer(userId.toString(),
-                topicSuffix + "-" + userId, group, messageHandler(session));
-        containerMap.put(userId.toString(), container);
         if (!messageDtos.isEmpty()) {
             session.getBasicRemote().sendText(messageCombine(messageDtos));
         }
-        container.start();
-        container.resume();
+        KafkaMessageListenerContainer<String, SiteMessageDto> interactionContainer = kafkaContainerConfig.getListenerContainer(
+                topicSuffix + "-" + userId,
+                topicSuffix + "-" + userId,
+                STR. "\{ topicSuffix }-\{ group }" ,
+                messageHandler(session, false));
+        KafkaMessageListenerContainer<String, SiteMessageDto> tweetedContainer = kafkaContainerConfig.getListenerContainer(
+                STR. "\{ tweeted }-\{ userId }" ,
+                STR. "\{ tweeted }-\{ userId }" , STR. "\{ tweeted }-\{ group }" , messageHandler(session, true));
+        containerMap.put(userId.toString(), List.of(interactionContainer, tweetedContainer));
+
+        interactionContainer.start();
+        interactionContainer.resume();
+        tweetedContainer.start();
+        tweetedContainer.resume();
     }
 
     private List<SiteMessageDto> chirperMessageCombine(List<SiteMessageDto> messageDtos) {
@@ -111,6 +122,7 @@ public class InteractionMessageStrategy implements MessageStrategy {
                     UserDto sender = userMap.get(messageDto.getSenderId());
                     messageDto.setSenderName(sender.getNickname());
                     messageDto.setSenderAvatar(sender.getSmallAvatarUrl());
+
                 } catch (JsonProcessingException e) {
                     e.printStackTrace();
                 }
@@ -165,7 +177,7 @@ public class InteractionMessageStrategy implements MessageStrategy {
         return "[]";
     }
 
-    private BatchMessageListener<String, SiteMessageDto> messageHandler(Session session) {
+    private BatchMessageListener<String, SiteMessageDto> messageHandler(Session session, Boolean ack) {
 
         return new BatchAcknowledgingMessageListener<String, SiteMessageDto>() {
             @SneakyThrows
@@ -177,6 +189,9 @@ public class InteractionMessageStrategy implements MessageStrategy {
                 if (!siteMessageDtos.isEmpty()) {
                     String message = messageCombine(siteMessageDtos);
                     session.getBasicRemote().sendText(message);
+                }
+                if (ack) {
+                    acknowledgment.acknowledge();
                 }
             }
         };

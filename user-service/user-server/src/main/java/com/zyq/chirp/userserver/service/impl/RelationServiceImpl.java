@@ -1,6 +1,7 @@
 package com.zyq.chirp.userserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zyq.chirp.adviceclient.dto.EntityType;
 import com.zyq.chirp.adviceclient.dto.EventType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
@@ -51,6 +52,26 @@ public class RelationServiceImpl implements RelationService {
                 .eq(Relation::getFromId, targetUserId)
                 .in(Relation::getToId, userIds));
     }
+
+    @Override
+    public List<Long> getFollower(Long userId, Integer page, Integer pageSize) {
+        Page<Relation> selectPage = new Page<>(page, pageSize);
+        selectPage.setSearchCount(false);
+        return relationMapper.selectPage(selectPage, new LambdaQueryWrapper<Relation>()
+                        .select(Relation::getFromId)
+                        .eq(Relation::getToId, userId))
+                .getRecords()
+                .stream()
+                .map(Relation::getFromId)
+                .toList();
+    }
+
+    @Override
+    public Long getFollowerCount(Long userId) {
+        return relationMapper.selectCount(new LambdaQueryWrapper<Relation>()
+                .eq(Relation::getToId, userId));
+    }
+
 
     @Override
     public void follow(Long fromId, Long toId) {

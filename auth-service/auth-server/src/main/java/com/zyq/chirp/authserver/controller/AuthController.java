@@ -2,6 +2,7 @@ package com.zyq.chirp.authserver.controller;
 
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.zyq.chirp.authserver.service.AuthService;
 import com.zyq.chirp.authserver.util.AccountType;
 import com.zyq.chirp.authserver.util.AccountTypeUtil;
 import com.zyq.chirp.common.exception.ChirpException;
@@ -13,6 +14,7 @@ import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,6 +24,8 @@ import java.util.Map;
 public class AuthController {
     @Resource
     UserClient userClient;
+    @Resource
+    AuthService authService;
 
     @PostMapping("/signIn")
     public ResponseEntity<Map<String, Object>> signIn(@RequestParam("account") String account, @RequestParam("password") String password) {
@@ -53,5 +57,27 @@ public class AuthController {
     @RequestMapping("/signOut")
     public void signOut() {
         StpUtil.logout();
+    }
+
+    @GetMapping("/online")
+    public ResponseEntity<String> online() {
+        authService.online(StpUtil.getLoginIdAsString());
+        return ResponseEntity.ok(null);
+    }
+
+    @GetMapping("/online/check")
+    public ResponseEntity<Boolean> check() {
+        return ResponseEntity.ok(authService.getIsOnline(StpUtil.getLoginIdAsString()));
+    }
+
+    @PostMapping("/online/check/multi")
+    public ResponseEntity<Map<String, Boolean>> multiCheck(@RequestParam("ids") Collection<String> ids) {
+        return ResponseEntity.ok(authService.getIsOnline(ids));
+    }
+
+    @GetMapping("/offline")
+    public ResponseEntity<String> offline() {
+        authService.offline(StpUtil.getLoginIdAsString());
+        return ResponseEntity.ok(null);
     }
 }

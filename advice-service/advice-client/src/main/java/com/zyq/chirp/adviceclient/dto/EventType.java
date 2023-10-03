@@ -2,6 +2,14 @@ package com.zyq.chirp.adviceclient.dto;
 
 public enum EventType {
     /**
+     * 发布了新的推文，通知关注者
+     */
+    TWEETED,
+    /**
+     * 单人私聊
+     */
+    CHAT,
+    /**
      * 点赞
      */
     LIKE,
@@ -29,6 +37,7 @@ public enum EventType {
      * 公告
      */
     ANNOUNCEMENT,
+
     /**
      * 通知
      */

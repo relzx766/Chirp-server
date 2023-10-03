@@ -90,5 +90,7 @@ public interface ChirperService {
 
     List<ChirperDto> combineWithMedia(Collection<ChirperDto> chirperDtos);
 
-    Map<Object, Map<String, Object>> getTrend(Integer page);
+    Map<Object, Map<String, Object>> getTrend(Integer page, String type);
+
+    Map<Long, List<Long>> getAllIdByAuthors(Collection<Long> userIds);
 }

@@ -4,10 +4,9 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.zyq.chirp.userserver.service.RelationService;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/rela")
@@ -37,5 +36,17 @@ public class RelationController {
     public ResponseEntity unblock(@RequestParam("toId") Long toId) {
         relationService.cancelBlock(StpUtil.getLoginIdAsLong(), toId);
         return ResponseEntity.ok(null);
+    }
+
+    @GetMapping("/followers/id/{userId}/{page}/{pageSize}")
+    public ResponseEntity<List<Long>> getFollowerIds(@PathVariable("userId") Long userId,
+                                                     @PathVariable("page") Integer page,
+                                                     @PathVariable("pageSize") Integer pageSize) {
+        return ResponseEntity.ok(relationService.getFollower(userId, page, pageSize));
+    }
+
+    @GetMapping("/count/{id}")
+    public ResponseEntity<Long> getFollowerCount(@PathVariable("id") Long userId) {
+        return ResponseEntity.ok(relationService.getFollowerCount(userId));
     }
 }

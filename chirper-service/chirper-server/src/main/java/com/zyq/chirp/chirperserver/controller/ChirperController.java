@@ -10,6 +10,7 @@ import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -91,6 +92,15 @@ public class ChirperController {
         return ResponseEntity.ok(chirperDtos.get(0));
     }
 
+    @PostMapping("/page/id")
+    public ResponseEntity<List<ChirperDto>> getByIds(@RequestParam("ids") List<Long> ids) {
+        List<ChirperDto> chirperDtos = chirperService.getById(ids);
+        if (StpUtil.isLogin()) {
+            chirperDtos = chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
+        }
+        return ResponseEntity.ok(chirperDtos);
+    }
+
     @GetMapping("/page/{page}")
     public ResponseEntity<List<ChirperDto>> getPage(@PathVariable("page") Integer page) {
         List<ChirperDto> chirperDtos = chirperService.getPage(page, null, null, null, null);
@@ -158,7 +168,13 @@ public class ChirperController {
     }
 
     @GetMapping("/trend/{page}")
-    public ResponseEntity<Map<Object, Map<String, Object>>> getTrend(@PathVariable("page") Integer page) {
-        return ResponseEntity.ok(chirperService.getTrend(page));
+    public ResponseEntity<Map<Object, Map<String, Object>>> getTrend(@PathVariable("page") Integer page,
+                                                                     @RequestParam("type") String type) {
+        return ResponseEntity.ok(chirperService.getTrend(page, type));
+    }
+
+    @PostMapping("/id/author")
+    public ResponseEntity<Map<Long, List<Long>>> getIdByAuthor(@RequestParam("userIds") Collection<Long> userIds) {
+        return ResponseEntity.ok(chirperService.getAllIdByAuthors(userIds));
     }
 }

@@ -28,4 +28,12 @@ public interface UserClient {
 
     @PostMapping("/user/id_info")
     ResponseEntity<List<Long>> getIdByUsername(@RequestParam("username") Collection<String> username);
+
+    @GetMapping("/rela/followers/id/{userId}/{page}/{pageSize}")
+    ResponseEntity<List<Long>> getFollowerIds(@PathVariable("userId") Long userId,
+                                              @PathVariable("page") Integer page,
+                                              @PathVariable("pageSize") Integer pageSize);
+
+    @GetMapping("/rela/count/{id}")
+    ResponseEntity<Long> getFollowerCount(@PathVariable("id") Long userId);
 }

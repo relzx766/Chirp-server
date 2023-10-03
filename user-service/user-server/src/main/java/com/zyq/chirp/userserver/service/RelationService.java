@@ -11,6 +11,10 @@ public interface RelationService {
 
     List<Relation> getUserRelation(Collection<Long> userIds, Long targetUserId);
 
+    List<Long> getFollower(Long userId, Integer page, Integer pageSize);
+
+    Long getFollowerCount(Long userId);
+
     void follow(Long fromId, Long toId);
 
     void unfollow(Long fromId, Long toId);

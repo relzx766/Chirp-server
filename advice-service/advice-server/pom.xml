@@ -11,10 +11,23 @@
     <artifactId>advice-server</artifactId>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <compilerArgs>--enable-preview</compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -28,7 +41,16 @@
             <groupId>com.zyq.chirp</groupId>
             <artifactId>advice-client</artifactId>
             <version>1.0</version>
-
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>feed-client</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>auth-client</artifactId>
+            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>com.zyq.chirp</groupId>
@@ -93,6 +115,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
             <optional>true</optional>
         </dependency>
         <!-- 用于适配mapstruct和lombok，否则lombok版本过高，mapstruct会失效 -->
@@ -113,6 +136,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <!-- kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
         </dependency>
         <!-- https://mvnrepository.com/artifact/jakarta.annotation/jakarta.annotation-api -->
         <dependency>

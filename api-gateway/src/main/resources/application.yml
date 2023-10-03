@@ -45,6 +45,12 @@ spring:
             - Path=/media-service/**
           filters:
             - StripPrefix=1
+        - id: feed-server
+          uri: lb://feed-server
+          predicates:
+            - Path=/feed-service/**
+          filters:
+            - StripPrefix=1
 
   config:
     import:

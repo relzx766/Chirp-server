@@ -12,6 +12,7 @@ import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Configuration
@@ -40,7 +41,7 @@ public class KafkaContainerConfig<T> {
     }
 
     @Bean
-    public Map<String, KafkaMessageListenerContainer> kafkaMessageListenerContainerMap() {
+    public Map<String, List<KafkaMessageListenerContainer>> kafkaMessageListenerContainerMap() {
         return new HashMap<>();
     }
 

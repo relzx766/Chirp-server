@@ -1,5 +1,6 @@
 package com.zyq.chirp.adviceserver;
 
+import com.zyq.chirp.authclient.client.AuthClient;
 import com.zyq.chirp.chirpclient.client.ChirperClient;
 import com.zyq.chirp.common.mq.DefaultKafkaProducer;
 import com.zyq.chirp.userclient.client.UserClient;
@@ -10,7 +11,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Import;
 
 @SpringBootApplication
-@EnableFeignClients(basePackageClasses = {ChirperClient.class, UserClient.class})
+@EnableFeignClients(basePackageClasses = {ChirperClient.class, UserClient.class, AuthClient.class})
 @Import({DefaultKafkaProducer.class})
 @MapperScan("com.zyq.chirp.adviceserver.mapper")
 public class AdviceServerApplication {

@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: feed-server
+  cloud:
+    nacos:
+      server-addr: 192.168.145.1:8848
+  config:
+    import:
+      - optional:nacos:feedServer-dev.yml
+      - optional:nacos:redis-config.yml?group=COMMON_GROUP
+      - optional:nacos:datasource-config.yml?group=COMMON_GROUP
+  data:
+    redis:
+      database: 0
+      host: localhost
+      port: 6379
+      password:
+      timeout: 6000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: feed_consumer_group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.zyq.chirp.chirpclient.dto,com.zyq.chirp.common.model,com.zyq.chirp.feedclient.dto,com.zyq.chirp.userclient.dto,com.zyq.chirp.common.mq
+    producer:
+      # 发生错误后，消息重发的次数。
+      retries: 0
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      #只要集群的首领节点收到消息，生产者就会收到一个来自服务器成功响应。
+      acks: 1
+    listener:
+      #主题不存在时是否停止运行
+      missing-topics-fatal: false
+      ack-mode: manual
+default-config:
+  page-size: 20
+  follower-query-size: 1000
+mq:
+  topic:
+    publish: publish
+    unfollow: unfollow
+    tweeted: tweeted
+  retry:
+    max: 3
+server:
+  port: 8086
+sa-token:
+  token-name: Authorization
