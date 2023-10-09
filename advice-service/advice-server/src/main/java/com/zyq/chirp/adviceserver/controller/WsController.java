@@ -1,6 +1,5 @@
 package com.zyq.chirp.adviceserver.controller;
 
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.adviceserver.domain.enums.CacheKey;
 import com.zyq.chirp.adviceserver.service.InteractionMessageService;
 import com.zyq.chirp.adviceserver.service.strategy.context.MessageContext;
@@ -30,7 +29,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 @ServerEndpoint("/interaction/{userId}")
 @Component
 @Slf4j
-public class InteractionController {
+public class WsController {
     static InteractionMessageStrategy messageStrategy;
     static InteractionMessageService interactionMessageService;
     static Map<String, List<KafkaMessageListenerContainer>> containerMap;
@@ -39,45 +38,45 @@ public class InteractionController {
     static String disconnectTopic;
     static RedisTemplate<String, Object> redisTemplate;
     private static ConcurrentHashMap<Long, Session> sessionPool = new ConcurrentHashMap<>();
-    private static CopyOnWriteArraySet<InteractionController> webSocketSet = new CopyOnWriteArraySet<>();
+    private static CopyOnWriteArraySet<WsController> webSocketSet = new CopyOnWriteArraySet<>();
     private String socketId;
 
     @Autowired
     public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
-        InteractionController.redisTemplate = redisTemplate;
+        WsController.redisTemplate = redisTemplate;
     }
 
     @Value("${mq.topic.socket-connect}")
 
     public void setConnectTopic(String connectTopic) {
-        InteractionController.connectTopic = connectTopic;
+        WsController.connectTopic = connectTopic;
     }
 
     @Value("${mq.topic.socket-disconnect}")
 
     public void setDisconnectTopic(String disconnectTopic) {
-        InteractionController.disconnectTopic = disconnectTopic;
+        WsController.disconnectTopic = disconnectTopic;
     }
 
     @Autowired
     public void setMessageStrategy(InteractionMessageStrategy messageStrategy) {
-        InteractionController.messageStrategy = messageStrategy;
+        WsController.messageStrategy = messageStrategy;
     }
 
     @Autowired
     public void setKafkaTemplate(KafkaTemplate<String, Object> kafkaTemplate) {
-        InteractionController.kafkaTemplate = kafkaTemplate;
+        WsController.kafkaTemplate = kafkaTemplate;
     }
 
     @Autowired
 
     public void setInteractionMessageService(InteractionMessageService interactionMessageService) {
-        InteractionController.interactionMessageService = interactionMessageService;
+        WsController.interactionMessageService = interactionMessageService;
     }
 
     @Resource
     public void setContainerMap(Map<String, List<KafkaMessageListenerContainer>> containerMap) {
-        InteractionController.containerMap = containerMap;
+        WsController.containerMap = containerMap;
     }
 
     @OnOpen
@@ -86,10 +85,9 @@ public class InteractionController {
         this.socketId = session.getId();
         webSocketSet.add(this);
         sessionPool.put(userId, session);
-        List<SiteMessageDto> messages = interactionMessageService.getByReceiverId(userId);
         redisTemplate.opsForHash().put(CacheKey.BOUND_CONNECT_INFO.getKey(), STR. "\{ userId }:\{ this.socketId }" , this.socketId);
         kafkaTemplate.send(connectTopic, userId);
-        new MessageContext(messageStrategy).send(messages, session, userId);
+        new MessageContext(messageStrategy).send(List.of(), session, userId);
     }
 
     @OnClose
@@ -106,7 +104,7 @@ public class InteractionController {
         List<KafkaMessageListenerContainer> container = containerMap.get(userId.toString());
         container.forEach(con -> {
             if (con.isRunning()) {
-                log.info("销毁kafka容器{}", con.getListenerId());
+                log.info("销毁kafka容器{}", con.getContainerProperties().getClientId());
                 con.stop();
                 con.destroy();
             }

@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +38,7 @@ public class LikeServerTask {
     Long saveLimit;
 
     @Async
-    //  @Scheduled(fixedDelay = 4000)
+    @Scheduled(fixedDelay = 4000)
     public void saveToDbTask() throws InterruptedException {
         BoundHashOperations<String, String, LikeDto> operations = redisTemplate.boundHashOps(CacheKey.LIKE_INFO_BOUND_KEY.getKey());
         Map<Integer, List<LikeDto>> likeMap = Objects.requireNonNull(operations.keys())
@@ -105,7 +106,7 @@ public class LikeServerTask {
     }
 
     @Async
-//    @Scheduled(fixedDelay = 4000)
+    @Scheduled(fixedDelay = 4000)
     @Transactional
     public void updateLikeCount() {
         log.info("持久化点赞数量 start----");

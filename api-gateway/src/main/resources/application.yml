@@ -32,13 +32,19 @@ spring:
             - Path=/user-service/**
           filters:
             - StripPrefix=1
-        - id: advice-server
+        - id: advice-websocket
           uri: lb:ws://advice-server
           predicates:
             - Path=/advice-service/interaction/**
           filters:
             - StripPrefix=1
             - WebsocketFilterFactory
+        - id: advice-http
+          uri: lb://advice-server
+          predicates:
+            - Path=/advice-service/**
+          filters:
+            - StripPrefix=1
         - id: media-server
           uri: lb://media-server
           predicates:

@@ -84,6 +84,23 @@ public class ChirperServiceImpl implements ChirperService {
     @Override
     @ParseMentioned
     public ChirperDto save(ChirperDto chirperDto) {
+
+        try {
+            List<Integer> medias = null;
+            if (chirperDto.getMediaKeys() != null) {
+                medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
+                });
+
+            }
+            if (medias == null || medias.isEmpty() || medias.size() > 9) {
+                if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {
+                    throw new ChirpException(Code.ERR_BUSINESS, "推文格式错误，推文为空或媒体文件超过9个");
+
+                }
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
         chirper.setConversationId(chirper.getId());
@@ -98,8 +115,20 @@ public class ChirperServiceImpl implements ChirperService {
     @Statistic(id = "#chirperDto.inReplyToChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
     @ParseMentioned
     public ChirperDto reply(ChirperDto chirperDto) {
-        if (null == chirperDto.getInReplyToChirperId()) {
-            throw new ChirpException(Code.ERR_BUSINESS, "未提供回复对象");
+        try {
+            List<Integer> medias = null;
+            if (chirperDto.getMediaKeys() != null) {
+                medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
+                });
+            }
+            if (medias == null || medias.isEmpty() || medias.size() > 9) {
+                if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {
+                    throw new ChirpException(Code.ERR_BUSINESS, "推文格式错误，推文为空或媒体文件超过9个");
+
+                }
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
@@ -237,6 +266,22 @@ public class ChirperServiceImpl implements ChirperService {
     @Statistic(id = "#chirperDto.referencedChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
     @ParseMentioned
     public ChirperDto quote(ChirperDto chirperDto) {
+        try {
+            List<Integer> medias = null;
+            if (chirperDto.getMediaKeys() != null) {
+                medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
+                });
+
+            }
+            if (medias == null || medias.isEmpty() || medias.size() > 9) {
+                if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {
+                    throw new ChirpException(Code.ERR_BUSINESS, "推文格式错误，推文为空或媒体文件超过9个");
+
+                }
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
         chirper.setConversationId(chirper.getId());
@@ -398,8 +443,11 @@ public class ChirperServiceImpl implements ChirperService {
     @Cacheable(cacheNames = "chirper:like#2", key = "#userId+':'+#page")
     public List<ChirperDto> getLikeRecordByUserId(Long userId, Integer page) {
         List<Like> likeRecord = likeService.getLikeRecord(userId, page);
-        List<Long> chirperIds = likeRecord.stream().map(Like::getChirperId).toList();
-        return this.getById(chirperIds);
+        if (!likeRecord.isEmpty()) {
+            List<Long> chirperIds = likeRecord.stream().map(Like::getChirperId).toList();
+            return this.getById(chirperIds);
+        }
+        return List.of();
     }
 
     @Override

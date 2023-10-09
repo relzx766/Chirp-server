@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +25,7 @@ public class ChirperTask {
     Long saveLimit;
 
     @Async
-    //  @Scheduled(fixedDelay = 4000)
+    @Scheduled(fixedDelay = 4000)
     public void saveViewTask() {
         log.info("持久化浏览量 start----");
         BoundHashOperations<String, String, Integer> operations = redisTemplate.boundHashOps(CacheKey.VIEW_COUNT_BOUND_KEY.getKey());
@@ -42,7 +43,7 @@ public class ChirperTask {
     }
 
     @Async
-    //  @Scheduled(fixedDelay = 5000)
+    @Scheduled(fixedDelay = 5000)
     @Transactional
     public void saveForwardCountTask() {
         log.info("持久化转发量 start----");

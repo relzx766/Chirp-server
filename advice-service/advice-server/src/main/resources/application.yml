@@ -66,12 +66,17 @@ spring:
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-value: 0
+      logic-not-delete-value: 1
 mq:
   consumer:
     group:
       pre-interaction: advice_pre_interaction_consumer
       interaction: advice_interaction_consumer
       tweeted: advice_tweeted_consumer
+      user: advice_user_consumer
   topic:
     tweeted: tweeted
     # 通知关注者已更新的topic
@@ -87,8 +92,10 @@ mq:
       interaction: interaction
       tweeted-advice: tweeted-advice
 default-config:
+  page-size: 20
   follower-query-size: 1000
 server:
   port: 8084
-
+sa-token:
+  token-name: Authorization
 

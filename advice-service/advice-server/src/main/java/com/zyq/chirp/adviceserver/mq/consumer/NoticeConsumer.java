@@ -33,9 +33,13 @@ public class NoticeConsumer {
     public void receiver(@Payload List<SiteMessageDto> messageDtos, Acknowledgment ack) {
         log.info("消费到互动消息，开始准备写入数据库");
         List<Notification> notifications = messageDtos.stream()
-                .map(messageDto -> messageConvertor.dtoToPojo(messageDto))
+                .map(messageDto -> {
+                    Notification notification = messageConvertor.dtoToPojo(messageDto);
+                    notification.setIsRead(false);
+                    notification.setStatus(true);
+                    return notification;
+                })
                 .toList();
-        System.out.println(notifications);
         interactionMessageService.saveBatch(notifications);
         log.info("写入完成，开始提交偏移量");
         ack.acknowledge();

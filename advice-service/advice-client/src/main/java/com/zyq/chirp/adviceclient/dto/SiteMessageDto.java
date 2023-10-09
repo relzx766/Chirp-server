@@ -3,14 +3,12 @@ package com.zyq.chirp.adviceclient.dto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
 
 @Data
 @AllArgsConstructor
 @Builder
-@NoArgsConstructor
 public class SiteMessageDto {
     private Long id;
     private Long senderId;
@@ -25,4 +23,11 @@ public class SiteMessageDto {
     private String noticeType;
     private Timestamp createTime;
     private Boolean isRead;
+    private Boolean status;
+
+    public SiteMessageDto() {
+        this.isRead = false;
+        this.status = true;
+        this.createTime = new Timestamp(System.currentTimeMillis());
+    }
 }

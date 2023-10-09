@@ -8,6 +8,7 @@ import com.zyq.chirp.chirperserver.service.ChirperService;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
@@ -37,7 +38,7 @@ public class ChirperController {
     }
 
     @PostMapping("/reply")
-    public ResponseEntity<ChirperDto> reply(@RequestBody ChirperDto chirperDto) {
+    public ResponseEntity<ChirperDto> reply(@RequestBody @Validated(ChirperDto.Reply.class) ChirperDto chirperDto) {
         chirperDto.setAuthorId(StpUtil.getLoginIdAsLong());
         return ResponseEntity.ok(chirperService.reply(chirperDto));
     }
@@ -68,7 +69,7 @@ public class ChirperController {
                         "referencedChirperId":"引用的推文id"
                         text与mediaKeys有一个不为空
                     }""")*/
-            @RequestBody ChirperDto chirperDto) {
+            @RequestBody @Validated(ChirperDto.Quote.class) ChirperDto chirperDto) {
         chirperDto.setAuthorId(StpUtil.getLoginIdAsLong());
         return ResponseEntity.ok(chirperService.quote(chirperDto));
     }
@@ -101,9 +102,13 @@ public class ChirperController {
         return ResponseEntity.ok(chirperDtos);
     }
 
-    @GetMapping("/page/{page}")
-    public ResponseEntity<List<ChirperDto>> getPage(@PathVariable("page") Integer page) {
-        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, null, null, null);
+    @PostMapping("/page/{page}")
+    public ResponseEntity<List<ChirperDto>> getPage(@PathVariable("page") Integer page,
+                                                    @Nullable @RequestParam("chirperId") Long chirperId,
+                                                    @Nullable @RequestParam("userId") List<Long> userId,
+                                                    @Nullable @RequestParam("type") String type,
+                                                    @Nullable @RequestParam("isMedia") Boolean isMedia) {
+        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, userId, ChirperType.find(type), isMedia);
         if (StpUtil.isLogin()) {
             chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
         }

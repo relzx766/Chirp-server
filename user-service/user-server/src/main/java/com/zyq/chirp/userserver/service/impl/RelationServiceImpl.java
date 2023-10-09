@@ -8,6 +8,8 @@ import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.common.exception.ChirpException;
 import com.zyq.chirp.common.model.Code;
 import com.zyq.chirp.common.mq.DefaultKafkaProducer;
+import com.zyq.chirp.common.mq.Message;
+import com.zyq.chirp.userclient.dto.RelationDto;
 import com.zyq.chirp.userserver.convertor.RelationConvertor;
 import com.zyq.chirp.userserver.mapper.RelationMapper;
 import com.zyq.chirp.userserver.model.enumeration.RelationType;
@@ -32,9 +34,11 @@ public class RelationServiceImpl implements RelationService {
     @Resource
     RelationConvertor relationConvertor;
     @Resource
-    DefaultKafkaProducer<SiteMessageDto> producer;
+    DefaultKafkaProducer<Object> producer;
     @Value("${mq.topic.site-message.follow}")
     String followTopic;
+    @Value("${mq.topic.unfollow}")
+    String unfollowTopic;
     Integer expire = 6;
 
     @Override
@@ -106,11 +110,18 @@ public class RelationServiceImpl implements RelationService {
         if (Objects.isNull(fromId) || Objects.isNull(toId)) {
             throw new ChirpException(Code.ERR_BUSINESS, "信息不完善");
         }
+        Relation relation = Relation.builder()
+                .fromId(fromId)
+                .toId(toId)
+                .status(RelationType.FOLLOWING.getRelation())
+                .build();
         relationMapper.delete(new LambdaQueryWrapper<Relation>()
-                .eq(Relation::getFromId, fromId)
-                .eq(Relation::getToId, toId)
-                .eq(Relation::getStatus, RelationType.UNFOLLOWED.getRelation()));
-
+                .eq(Relation::getFromId, relation.getFromId())
+                .eq(Relation::getToId, relation.getToId())
+                .eq(Relation::getStatus, relation.getStatus()));
+        Message<RelationDto> message = new Message<>();
+        message.setBody(relationConvertor.pojoToDto(relation));
+        producer.send(unfollowTopic, message);
     }
 
     @Override

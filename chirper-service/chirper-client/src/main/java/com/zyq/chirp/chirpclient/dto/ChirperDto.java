@@ -1,5 +1,6 @@
 package com.zyq.chirp.chirpclient.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,12 +22,14 @@ public class ChirperDto {
     //--
     private Long conversationId;
     private Long inReplyToUserId;
+    @NotNull(groups = Reply.class, message = "回复对象不能为空")
     private Long inReplyToChirperId;
 
     private Timestamp createTime;
     @Length(max = 500)
     private String text;
     private String type;
+    @NotNull(groups = Quote.class, message = "引用对象不能为空")
     private Long referencedChirperId;
     private ChirperDto referenced;
     private String mediaKeys;
@@ -51,5 +54,11 @@ public class ChirperDto {
         this.isLike = false;
         this.isForward = false;
         this.isQuote = false;
+    }
+
+    public interface Reply {
+    }
+
+    public interface Quote {
     }
 }

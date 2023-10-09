@@ -37,7 +37,9 @@ public class KafkaContainerConfig<T> {
         containerProperties.setClientId(id);
         containerProperties.setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         consumerFactory.setBeanName(id);
-        return new KafkaMessageListenerContainer<>(consumerFactory, containerProperties);
+        KafkaMessageListenerContainer<String, T> container = new KafkaMessageListenerContainer<>(consumerFactory, containerProperties);
+
+        return container;
     }
 
     @Bean

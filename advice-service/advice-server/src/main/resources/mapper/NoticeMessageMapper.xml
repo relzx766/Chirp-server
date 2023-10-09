@@ -3,7 +3,7 @@
 <mapper namespace="com.zyq.chirp.adviceserver.mapper.NoticeMessageMapper">
     <insert id="insertBatch">
         replace into tb_site_message(id, sender_id, receiver_id, son_entity, entity, entity_type, event, notice_type,
-        create_time, is_read)
+        create_time, is_read,status)
         values
 
         <foreach collection="messages" item="message" separator=",">
@@ -16,7 +16,8 @@
             #{message.event} ,
             #{message.noticeType},
             #{message.createTime} ,
-            #{message.isRead})
+            #{message.isRead},
+            #{message.status})
         </foreach>
     </insert>
 
