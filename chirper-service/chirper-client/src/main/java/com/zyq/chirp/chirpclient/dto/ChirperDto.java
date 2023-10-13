@@ -1,5 +1,6 @@
 package com.zyq.chirp.chirpclient.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,6 +13,8 @@ import java.sql.Timestamp;
 @AllArgsConstructor
 @Builder
 public class ChirperDto {
+
+    @JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
 
     private Long id;
     //作者信息--

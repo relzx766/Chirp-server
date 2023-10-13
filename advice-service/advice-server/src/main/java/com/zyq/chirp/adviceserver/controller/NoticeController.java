@@ -1,13 +1,16 @@
 package com.zyq.chirp.adviceserver.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.zyq.chirp.adviceclient.dto.ReadRecordDto;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.adviceserver.service.InteractionMessageService;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -29,9 +32,9 @@ public class NoticeController {
         return ResponseEntity.ok(interactionMessageService.combine(notice));
     }
 
-    @PostMapping("/read/mark")
-    public ResponseEntity<String> markAsRead(@RequestParam("messageId") Collection<Long> messageIds) {
-        interactionMessageService.markAsRead(messageIds, StpUtil.getLoginIdAsLong());
+    @GetMapping("/read/mark")
+    public ResponseEntity<ReadRecordDto> markAsRead() {
+        interactionMessageService.readAll(StpUtil.getLoginIdAsLong());
         return ResponseEntity.ok(null);
     }
 }

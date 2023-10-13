@@ -25,6 +25,7 @@ public interface InteractionMessageService {
 
     void markAsRead(Collection<Long> messageIds, Long receiverId);
 
+
     /**
      * 将消息所需的一切信息组装，如实体信息
      *

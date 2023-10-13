@@ -61,7 +61,7 @@ public class InteractionMessageStrategy implements MessageStrategy {
                 userId.toString(),
                 interaction + "-" + userId,
                 STR. "\{ group }-\{ userId }" ,
-                messageHandler(session, false));
+                messageHandler(session, true));
         KafkaMessageListenerContainer<String, SiteMessageDto> tweetedContainer = kafkaContainerConfig.getListenerContainer(
                 userId.toString(),
                 STR. "\{ tweeted }-\{ userId }" , STR. "\{ group }-\{ userId }" , messageHandler(session, true));

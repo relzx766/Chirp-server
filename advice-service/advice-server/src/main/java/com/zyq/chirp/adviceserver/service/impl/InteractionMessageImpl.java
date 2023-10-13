@@ -33,6 +33,7 @@ public class InteractionMessageImpl implements InteractionMessageService {
     @Value("${default-config.page-size}")
     Integer pageSize;
 
+
     /**
      * id由上游mq生成
      *
@@ -86,7 +87,10 @@ public class InteractionMessageImpl implements InteractionMessageService {
 
     @Override
     public void readAll(Long receiverId) {
-        noticeMessageMapper.update(null, new LambdaUpdateWrapper<Notification>().set(Notification::getIsRead, true).eq(Notification::getReceiverId, receiverId));
+        noticeMessageMapper.update(null, new LambdaUpdateWrapper<Notification>()
+                .set(Notification::getIsRead, true)
+                .eq(Notification::getReceiverId, receiverId)
+                .eq(Notification::getIsRead, false));
     }
 
     @Override
@@ -111,6 +115,7 @@ public class InteractionMessageImpl implements InteractionMessageService {
                 .in(Notification::getId, messageIds)
                 .set(Notification::getIsRead, true));
     }
+
 
     @Override
     public List<SiteMessageDto> combine(Collection<SiteMessageDto> messageDtos) {

@@ -90,12 +90,13 @@ public class ChirperServiceImpl implements ChirperService {
             if (chirperDto.getMediaKeys() != null) {
                 medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
                 });
-
+                if (medias != null && medias.isEmpty()) {
+                    chirperDto.setMediaKeys(null);
+                }
             }
-            if (medias == null || medias.isEmpty() || medias.size() > 9) {
+            if (medias == null || medias.size() > 9) {
                 if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {
                     throw new ChirpException(Code.ERR_BUSINESS, "推文格式错误，推文为空或媒体文件超过9个");
-
                 }
             }
         } catch (JsonProcessingException e) {
@@ -120,6 +121,9 @@ public class ChirperServiceImpl implements ChirperService {
             if (chirperDto.getMediaKeys() != null) {
                 medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
                 });
+                if (medias != null && medias.isEmpty()) {
+                    chirperDto.setMediaKeys(null);
+                }
             }
             if (medias == null || medias.isEmpty() || medias.size() > 9) {
                 if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {
@@ -271,7 +275,9 @@ public class ChirperServiceImpl implements ChirperService {
             if (chirperDto.getMediaKeys() != null) {
                 medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
                 });
-
+                if (medias != null && medias.isEmpty()) {
+                    chirperDto.setMediaKeys(null);
+                }
             }
             if (medias == null || medias.isEmpty() || medias.size() > 9) {
                 if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {

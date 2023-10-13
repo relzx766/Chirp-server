@@ -77,6 +77,7 @@ mq:
       interaction: advice_interaction_consumer
       tweeted: advice_tweeted_consumer
       user: advice_user_consumer
+      read: advice_read_consumer
   topic:
     tweeted: tweeted
     # 通知关注者已更新的topic
@@ -91,6 +92,7 @@ mq:
       mentioned: MENTIONED
       interaction: interaction
       tweeted-advice: tweeted-advice
+      read: read
 default-config:
   page-size: 20
   follower-query-size: 1000

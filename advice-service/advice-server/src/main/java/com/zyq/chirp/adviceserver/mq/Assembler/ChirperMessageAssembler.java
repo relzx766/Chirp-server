@@ -63,7 +63,6 @@ public class ChirperMessageAssembler {
                     if (messageDto.getSenderId().equals(messageDto.getReceiverId())) {
                         continue;
                     }
-
                     messageDto.setNoticeType(NoticeType.USER.name());
                     messageDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
                     kafkaTemplate.send(interactionTopic + "-" + messageDto.getReceiverId(), messageDto);
