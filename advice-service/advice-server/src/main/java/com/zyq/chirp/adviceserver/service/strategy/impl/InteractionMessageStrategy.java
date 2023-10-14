@@ -29,10 +29,7 @@ public class InteractionMessageStrategy implements MessageStrategy {
     KafkaContainerConfig<SiteMessageDto> kafkaContainerConfig;
     @Resource
     ObjectMapper objectMapper;
-    @Resource
-    ChirperAssembleImpl chirperAssemble;
-    @Resource
-    UserAssembleImpl userAssemble;
+
     @Resource
     InteractionMessageService interactionMessageService;
     @Resource
@@ -66,7 +63,6 @@ public class InteractionMessageStrategy implements MessageStrategy {
                 userId.toString(),
                 STR. "\{ tweeted }-\{ userId }" , STR. "\{ group }-\{ userId }" , messageHandler(session, true));
         containerMap.put(userId.toString(), List.of(interactionContainer, tweetedContainer));
-
         interactionContainer.start();
         interactionContainer.resume();
         tweetedContainer.start();

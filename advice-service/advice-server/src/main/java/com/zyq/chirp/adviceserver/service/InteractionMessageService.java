@@ -19,6 +19,7 @@ public interface InteractionMessageService {
     Integer getUnReadCount(Long receiverId);
 
     void readAll(Long receiverId);
+
     List<SiteMessageDto> getUnReadByReceiverId(Long receiverId);
 
     void markAsRead(Long messageId, Long receiverId);

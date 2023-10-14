@@ -37,13 +37,11 @@ public class KafkaContainerConfig<T> {
         containerProperties.setClientId(id);
         containerProperties.setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         consumerFactory.setBeanName(id);
-        KafkaMessageListenerContainer<String, T> container = new KafkaMessageListenerContainer<>(consumerFactory, containerProperties);
-
-        return container;
+        return new KafkaMessageListenerContainer<>(consumerFactory, containerProperties);
     }
 
     @Bean
-    public Map<String, List<KafkaMessageListenerContainer>> kafkaMessageListenerContainerMap() {
+    public Map<String, List<KafkaMessageListenerContainer<String, Object>>> kafkaMessageListenerContainerMap() {
         return new HashMap<>();
     }
 

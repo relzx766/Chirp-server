@@ -48,7 +48,6 @@ public class InteractionMessageImpl implements InteractionMessageService {
      * id由上游mq生成
      *
      * @param notifications
-     *
      */
     @Override
     public void saveBatch(Collection<Notification> notifications) {
