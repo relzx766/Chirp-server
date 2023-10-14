@@ -13,6 +13,8 @@ public interface UserService {
 
     UserDto getById(Long userId, Long currentUserId);
 
+    List<UserDto> getByIds(Collection<Long> userIds, Long currentUserId);
+
     UserDto getByUsername(String username, Long currentUserId);
 
     UserDto getDetailByEmail(String email);

@@ -13,6 +13,8 @@ public interface RelationService {
 
     List<Long> getFollower(Long userId, Integer page, Integer pageSize);
 
+    List<Long> getFollowing(Long userId, Integer page, Integer pageSize);
+
     Long getFollowerCount(Long userId);
 
     Long getFollowingCount(Long userId);

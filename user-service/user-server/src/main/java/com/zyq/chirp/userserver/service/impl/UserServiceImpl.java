@@ -103,6 +103,34 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<UserDto> getByIds(Collection<Long> userIds, Long currentUserId) {
+        if (userIds == null) {
+            throw new ChirpException(Code.ERR_BUSINESS, "对象用户为空");
+        } else if (userIds.isEmpty()) {
+            throw new ChirpException(Code.ERR_BUSINESS, "对象用户为空");
+        } else {
+            Map<Long, Integer> relation = new HashMap<>();
+            if (currentUserId != null) {
+                relation.putAll(relationService.getUserRelation(userIds, currentUserId).stream()
+                        .collect(Collectors.toMap(Relation::getToId, Relation::getStatus)));
+            }
+            return userMapper.selectList(new LambdaQueryWrapper<User>()
+                            .in(User::getId, userIds)
+                            .eq(User::getStatus, AccountStatus.ACTIVE.getStatus()))
+                    .stream()
+                    .map(user -> {
+                        UserDto userDto = userConvertor.pojoToDto(user);
+                        Integer status = relation.get(userDto.getId());
+                        status = status != null ? status : RelationType.UNFOLLOWED.getRelation();
+                        userDto.setRelation(status);
+                        return userDto;
+                    })
+                    .toList();
+        }
+    }
+
+
+    @Override
     @Cacheable(key = "'profile:'+#username")
     public UserDto getByUsername(String username, Long currentUserId) {
         if (username == null || username.trim().isEmpty()) {

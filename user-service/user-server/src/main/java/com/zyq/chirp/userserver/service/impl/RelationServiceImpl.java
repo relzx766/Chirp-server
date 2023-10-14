@@ -73,6 +73,19 @@ public class RelationServiceImpl implements RelationService {
     }
 
     @Override
+    public List<Long> getFollowing(Long userId, Integer page, Integer pageSize) {
+        Page<Relation> selectPage = new Page<>(page, pageSize);
+        selectPage.setSearchCount(false);
+        return relationMapper.selectPage(selectPage, new LambdaQueryWrapper<Relation>()
+                        .select(Relation::getToId)
+                        .eq(Relation::getFromId, userId))
+                .getRecords()
+                .stream()
+                .map(Relation::getToId)
+                .toList();
+    }
+
+    @Override
     public Long getFollowerCount(Long userId) {
         return relationMapper.selectCount(new LambdaQueryWrapper<Relation>()
                 .eq(Relation::getToId, userId));

@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.userclient.dto.UserDto;
+import com.zyq.chirp.userserver.service.RelationService;
 import com.zyq.chirp.userserver.service.UserService;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
@@ -21,6 +22,8 @@ public class UserController {
     UserService userService;
     @Resource
     ObjectMapper objectMapper;
+    @Resource
+    RelationService relationService;
 
     /**
      * 给auth调用
@@ -89,5 +92,28 @@ public class UserController {
     public ResponseEntity<List<Long>> getIdByUsername(@RequestParam("username") Collection<String> username) {
         return ResponseEntity.ok(userService.getIdByUsername(username));
     }
+
+    @GetMapping("/follower/{id}/{page}")
+    public ResponseEntity<List<UserDto>> getFollower(@PathVariable("id") Long id,
+                                                     @PathVariable("page") Integer page) {
+        int pageSize = 40;
+        List<Long> follower = relationService.getFollower(id, page, pageSize);
+        if (StpUtil.isLogin()) {
+            return ResponseEntity.ok(userService.getByIds(follower, StpUtil.getLoginIdAsLong()));
+        }
+        return ResponseEntity.ok(userService.getByIds(follower, null));
+    }
+
+    @GetMapping("/following/{id}/{page}")
+    public ResponseEntity<List<UserDto>> getFollowing(@PathVariable("id") Long id,
+                                                      @PathVariable("page") Integer page) {
+        int pageSize = 40;
+        List<Long> following = relationService.getFollowing(id, page, pageSize);
+        if (StpUtil.isLogin()) {
+            return ResponseEntity.ok(userService.getByIds(following, StpUtil.getLoginIdAsLong()));
+        }
+        return ResponseEntity.ok(userService.getByIds(following, null));
+    }
+
 
 }
