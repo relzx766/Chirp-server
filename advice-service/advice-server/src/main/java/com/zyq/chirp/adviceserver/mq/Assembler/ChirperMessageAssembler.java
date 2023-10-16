@@ -35,8 +35,8 @@ public class ChirperMessageAssembler {
     UserClient userClient;
     @Resource
     KafkaTemplate<String, SiteMessageDto> kafkaTemplate;
-    @Value("${mq.topic.site-message.interaction}")
-    String interactionTopic;
+    @Value("${mq.topic.site-message.notice}")
+    String notice;
     @Resource
     ObjectMapper objectMapper;
 
@@ -65,7 +65,7 @@ public class ChirperMessageAssembler {
                     }
                     messageDto.setNoticeType(NoticeType.USER.name());
                     messageDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
-                    kafkaTemplate.send(interactionTopic + "-" + messageDto.getReceiverId(), messageDto);
+                    kafkaTemplate.send(notice, messageDto);
                 }
             }
         }

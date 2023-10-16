@@ -3,7 +3,7 @@ package com.zyq.chirp.adviceserver.mq.Assembler;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.zyq.chirp.adviceclient.dto.NoticeType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
-import com.zyq.chirp.adviceserver.service.InteractionMessageService;
+import com.zyq.chirp.adviceserver.service.NoticeMessageService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,11 +20,11 @@ import java.util.List;
 @Slf4j
 public class UserMessageAssembler {
     @Resource
-    InteractionMessageService interactionMessageService;
+    NoticeMessageService noticeMessageService;
     @Resource
     KafkaTemplate<String, SiteMessageDto> kafkaTemplate;
-    @Value("${mq.topic.site-message.interaction}")
-    String interactionTopic;
+    @Value("${mq.topic.site-message.notice}")
+    String notice;
 
     @KafkaListener(topics = "${mq.topic.site-message.follow}",
             groupId = "${mq.consumer.group.pre-interaction}",
@@ -34,7 +34,7 @@ public class UserMessageAssembler {
             messageDto.setId(IdWorker.getId());
             messageDto.setNoticeType(NoticeType.USER.name());
             messageDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
-            kafkaTemplate.send(interactionTopic + "-" + messageDto.getReceiverId(), messageDto);
+            kafkaTemplate.send(notice, messageDto);
         });
         ack.acknowledge();
     }

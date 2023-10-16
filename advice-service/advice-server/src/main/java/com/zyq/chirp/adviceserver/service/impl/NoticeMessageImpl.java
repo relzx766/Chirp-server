@@ -3,35 +3,31 @@ package com.zyq.chirp.adviceserver.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zyq.chirp.adviceclient.dto.EntityType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.adviceserver.convertor.MessageConvertor;
 import com.zyq.chirp.adviceserver.domain.pojo.Notification;
 import com.zyq.chirp.adviceserver.mapper.NoticeMessageMapper;
-import com.zyq.chirp.adviceserver.service.InteractionMessageService;
-import com.zyq.chirp.adviceserver.service.strategy.context.MessageAssembleContext;
-import com.zyq.chirp.adviceserver.service.strategy.impl.ChirperAssembleImpl;
-import com.zyq.chirp.adviceserver.service.strategy.impl.UserAssembleImpl;
+import com.zyq.chirp.adviceserver.service.NoticeMessageService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 @Service
-public class InteractionMessageImpl implements InteractionMessageService {
+public class NoticeMessageImpl implements NoticeMessageService {
     @Resource
     NoticeMessageMapper noticeMessageMapper;
     @Resource
     MessageConvertor messageConvertor;
-    @Resource
-    ChirperAssembleImpl chirperAssemble;
-    @Resource
-    UserAssembleImpl userAssemble;
     @Value("${default-config.page-size}")
     Integer pageSize;
+    @Resource
+    KafkaProperties kafkaProperties;
+    @Value("${mq.topic.site-message.notice}")
+    String notice;
 
 
     /**
@@ -116,27 +112,4 @@ public class InteractionMessageImpl implements InteractionMessageService {
     }
 
 
-    @Override
-    public List<SiteMessageDto> combine(Collection<SiteMessageDto> messageDtos) {
-        List<SiteMessageDto> chirperMsg = new ArrayList<>();
-        List<SiteMessageDto> userMsg = new ArrayList<>();
-        messageDtos.forEach(messageDto -> {
-            if (EntityType.CHIRPER.name().equals(messageDto.getEntityType())) {
-                chirperMsg.add(messageDto);
-            }
-            if (EntityType.USER.name().equals(messageDto.getEntityType())) {
-                userMsg.add(messageDto);
-            }
-        });
-        if (!chirperMsg.isEmpty()) {
-            new MessageAssembleContext(chirperAssemble).assemble(chirperMsg);
-        }
-        if (!userMsg.isEmpty()) {
-            new MessageAssembleContext(userAssemble).assemble(userMsg);
-        }
-        List<SiteMessageDto> messages = new ArrayList<>();
-        messages.addAll(chirperMsg);
-        messages.addAll(userMsg);
-        return messages;
-    }
 }

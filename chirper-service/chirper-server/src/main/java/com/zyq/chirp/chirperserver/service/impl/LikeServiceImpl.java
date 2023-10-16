@@ -11,7 +11,6 @@ import com.zyq.chirp.chirperserver.domain.enums.CacheKey;
 import com.zyq.chirp.chirperserver.domain.enums.LikeType;
 import com.zyq.chirp.chirperserver.domain.pojo.Like;
 import com.zyq.chirp.chirperserver.mapper.LikeMapper;
-import com.zyq.chirp.chirperserver.mq.producer.ChirperProducer;
 import com.zyq.chirp.chirperserver.service.LikeService;
 import com.zyq.chirp.common.exception.ChirpException;
 import com.zyq.chirp.common.model.Code;
@@ -21,6 +20,7 @@ import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -34,9 +34,9 @@ public class LikeServiceImpl implements LikeService {
     LikeMapper likeMapper;
 
     @Resource
-    ChirperProducer<SiteMessageDto> chirperProducer;
+    KafkaTemplate<String, Object> kafkaTemplate;
     @Resource
-    RedisTemplate redisTemplate;
+    RedisTemplate<String, Object> redisTemplate;
     @Value("${mq.topic.site-message.like}")
     String topic;
     @Value("${default-config.page-size}")
@@ -56,17 +56,22 @@ public class LikeServiceImpl implements LikeService {
         operations.delete(CacheUtil.combineKey(likeDto.getChirperId(), likeDto.getUserId(), LikeType.CANCEL.getType()));
         String key = CacheUtil.combineKey(likeDto.getChirperId(), likeDto.getUserId(), LikeType.ADD.getType());
         Boolean flag = operations.putIfAbsent(key, likeDto);
-        if (!flag) {
+        if (Boolean.FALSE.equals(flag)) {
             throw new ChirpException(Code.ERR_BUSINESS, "重复点赞");
         }
-        SiteMessageDto siteMessageDto = SiteMessageDto.builder()
-                .sonEntity(String.valueOf(likeDto.getChirperId()))
-                .event(EventType.LIKE.name())
-                .entityType(EntityType.CHIRPER.name())
-                .senderId(likeDto.getUserId())
-                .build();
-        chirperProducer.avoidSend(CacheUtil.combineKey(likeDto.getChirperId(), likeDto.getUserId()),
-                topic, siteMessageDto, Duration.ofHours(expire));
+        Thread.ofVirtual().start(() -> {
+            Boolean absent = redisTemplate.opsForValue().setIfAbsent(STR. "\{ EventType.LIKE.name() }:\{ likeDto.getUserId() }:\{ likeDto.getChirperId() }" , 1, Duration.ofHours(expire));
+            if (Boolean.TRUE.equals(absent)) {
+                SiteMessageDto siteMessageDto = SiteMessageDto.builder()
+                        .sonEntity(String.valueOf(likeDto.getChirperId()))
+                        .event(EventType.LIKE.name())
+                        .entityType(EntityType.CHIRPER.name())
+                        .senderId(likeDto.getUserId())
+                        .build();
+                kafkaTemplate.send(topic, siteMessageDto);
+            }
+
+        });
     }
 
     @Override

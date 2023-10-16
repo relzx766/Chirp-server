@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.EntityType;
 import com.zyq.chirp.adviceclient.dto.EventType;
+import com.zyq.chirp.adviceclient.dto.NoticeType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.aspect.ParseMentioned;
@@ -20,12 +21,10 @@ import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
 import com.zyq.chirp.chirperserver.domain.pojo.Chirper;
 import com.zyq.chirp.chirperserver.domain.pojo.Like;
 import com.zyq.chirp.chirperserver.mapper.ChirperMapper;
-import com.zyq.chirp.chirperserver.mq.producer.ChirperProducer;
 import com.zyq.chirp.chirperserver.service.ChirperService;
 import com.zyq.chirp.chirperserver.service.LikeService;
 import com.zyq.chirp.common.exception.ChirpException;
 import com.zyq.chirp.common.model.Code;
-import com.zyq.chirp.common.util.CacheUtil;
 import com.zyq.chirp.common.util.PageUtil;
 import com.zyq.chirp.mediaclient.client.MediaClient;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
@@ -39,6 +38,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,19 +66,19 @@ public class ChirperServiceImpl implements ChirperService {
     @Resource
     ObjectMapper objectMapper;
     @Resource
-    ChirperProducer<SiteMessageDto> chirperProducer;
+    KafkaTemplate<String, Object> kafkaTemplate;
     @Resource
     RedisTemplate<String, Object> redisTemplate;
     @Value("${default-config.page-size}")
     Integer pageSize;
     @Value("${mq.topic.site-message.forward}")
-    String forwardTopic;
-    @Value("${mq.topic.site-message.quote}")
-    String quoteTopic;
+    String forward;
     @Value("${mq.topic.site-message.reply}")
-    String replyTopic;
-    @Value("${mq.topic.chirper-delay-post}")
-    String delayPostTopic;
+
+    String reply;
+    @Value("${mq.topic.site-message.quote}")
+
+    String quote;
     Integer expire = 6;
 
     @Override
@@ -146,16 +146,15 @@ public class ChirperServiceImpl implements ChirperService {
         if (!isInsert || !isSet) {
             throw new ChirpException(Code.ERR_BUSINESS, "回复失败");
         }
-        CompletableFuture.runAsync(() -> {
-            SiteMessageDto message = SiteMessageDto.builder()
-                    .sonEntity(chirperDto.getInReplyToChirperId().toString())
-                    .entity(chirper.getId().toString())
-                    .event(EventType.REPLY.name())
-                    .entityType(EntityType.CHIRPER.name())
-                    .senderId(chirper.getAuthorId())
-                    .build();
-            chirperProducer.send(replyTopic, message);
-        });
+        SiteMessageDto message = SiteMessageDto.builder()
+                .sonEntity(chirperDto.getInReplyToChirperId().toString())
+                .entity(chirper.getId().toString())
+                .event(EventType.REPLY.name())
+                .entityType(EntityType.CHIRPER.name())
+                .noticeType(NoticeType.USER.name())
+                .senderId(chirper.getAuthorId())
+                .build();
+        kafkaTemplate.send(reply, message);
         return chirperConvertor.pojoToDto(chirper);
     }
 
@@ -238,15 +237,18 @@ public class ChirperServiceImpl implements ChirperService {
                     .eq(Chirper::getAuthorId, userId)
                     .eq(Chirper::getType, ChirperType.FORWARD.name()));
         }
-        CompletableFuture.runAsync(() -> {
-            SiteMessageDto messageDto = SiteMessageDto.builder()
-                    .sonEntity(String.valueOf(chirperId))
-                    .entityType(EntityType.CHIRPER.name())
-                    .event(EventType.FORWARD.name())
-                    .senderId(userId)
-                    .build();
-            chirperProducer.avoidSend(CacheUtil.combineKey(CacheUtil.combineKey(chirperId, userId)),
-                    forwardTopic, messageDto, Duration.ofHours(expire));
+        Thread.ofVirtual().start(() -> {
+            Boolean absent = redisTemplate.opsForValue().setIfAbsent(STR. "\{ EventType.FORWARD.name() }:\{ userId }:\{ chirperId }" , 1, Duration.ofHours(expire));
+            if (Boolean.TRUE.equals(absent)) {
+                SiteMessageDto messageDto = SiteMessageDto.builder()
+                        .sonEntity(String.valueOf(chirperId))
+                        .entityType(EntityType.CHIRPER.name())
+                        .event(EventType.FORWARD.name())
+                        .senderId(userId)
+                        .build();
+                kafkaTemplate.send(forward, messageDto);
+            }
+
         });
     }
 
@@ -288,30 +290,34 @@ public class ChirperServiceImpl implements ChirperService {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-        Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
-        chirper.setId(IdWorker.getId());
-        chirper.setConversationId(chirper.getId());
-        chirper.setType(ChirperType.QUOTE.toString());
-        chirper.setStatus(ChirperStatus.ACTIVE.getStatus());
-        chirper.setCreateTime(new Timestamp(System.currentTimeMillis()));
-        boolean isInsert = chirperMapper.insert(chirper) > 0;
+        Chirper refer = chirperMapper.selectOne(new LambdaQueryWrapper<Chirper>().select(Chirper::getAuthorId).eq(Chirper::getId, chirperDto.getReferencedChirperId()));
+        if (refer != null) {
+            Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
+            chirper.setId(IdWorker.getId());
+            chirper.setConversationId(chirper.getId());
+            chirper.setType(ChirperType.QUOTE.toString());
+            chirper.setStatus(ChirperStatus.ACTIVE.getStatus());
+            chirper.setCreateTime(new Timestamp(System.currentTimeMillis()));
+            boolean isInsert = chirperMapper.insert(chirper) > 0;
+            chirperMapper.update(null, new LambdaUpdateWrapper<Chirper>()
+                    .setSql("quote_count=quote_count+1")
+                    .eq(Chirper::getId, chirper.getReferencedChirperId()));
+            if (!isInsert) {
+                throw new ChirpException(Code.ERR_BUSINESS, "发布失败");
+            }
 
-        boolean isSet = chirperMapper.update(null, new LambdaUpdateWrapper<Chirper>()
-                .setSql("quote_count=quote_count+1")
-                .eq(Chirper::getId, chirper.getReferencedChirperId())) > 0;
-        if (!isInsert || !isSet) {
-            throw new ChirpException(Code.ERR_BUSINESS, "发布失败");
-        }
-        CompletableFuture.runAsync(() -> {
             SiteMessageDto messageDto = SiteMessageDto.builder()
                     .sonEntity(chirperDto.getReferencedChirperId().toString())
                     .entity(chirper.getId().toString())
+                    .noticeType(NoticeType.USER.name())
                     .event(EventType.QUOTE.name())
                     .entityType(EntityType.CHIRPER.name())
                     .senderId(chirper.getAuthorId()).build();
-            chirperProducer.send(quoteTopic, messageDto);
-        });
-        return chirperConvertor.pojoToDto(chirper);
+            kafkaTemplate.send(quote, messageDto);
+            return chirperConvertor.pojoToDto(chirper);
+        } else {
+            throw new ChirpException(Code.ERR_BUSINESS, "引用对象不存在");
+        }
     }
 
     @Override
@@ -396,9 +402,6 @@ public class ChirperServiceImpl implements ChirperService {
     }
 
     /**
-     * @param keyword
-     * @param page
-     * @param isMedia
      * @return 关键词为空或null返回空列表
      */
     @Override
@@ -598,6 +601,18 @@ public class ChirperServiceImpl implements ChirperService {
                             Chirper::getAuthorId, Collectors.mapping(Chirper::getId, Collectors.toList())));
         }
         return Map.of();
+    }
+
+    @Override
+    public Long getAuthorIdByChirperId(Long chirperId) {
+        Chirper chirper = chirperMapper.selectOne(new LambdaQueryWrapper<Chirper>()
+                .select(Chirper::getAuthorId)
+                .eq(Chirper::getId, chirperId));
+        if (chirper != null) {
+            return chirper.getAuthorId();
+        } else {
+            throw new ChirpException(Code.ERR_BUSINESS, "推文不存在");
+        }
     }
 
 

@@ -1,11 +1,11 @@
 package com.zyq.chirp.adviceserver.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceserver.domain.enums.CacheKey;
-import com.zyq.chirp.adviceserver.service.InteractionMessageService;
-import com.zyq.chirp.adviceserver.service.strategy.context.MessageContext;
-import com.zyq.chirp.adviceserver.service.strategy.impl.InteractionMessageStrategy;
-import jakarta.annotation.Resource;
+import com.zyq.chirp.adviceserver.mq.dispatcher.NoticeDispatcher;
+import com.zyq.chirp.adviceserver.service.NoticeMessageService;
 import jakarta.websocket.OnClose;
+import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
@@ -18,10 +18,8 @@ import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -30,16 +28,23 @@ import java.util.concurrent.CopyOnWriteArraySet;
 @Component
 @Slf4j
 public class WsController {
-    static InteractionMessageStrategy messageStrategy;
-    static InteractionMessageService interactionMessageService;
-    static Map<String, List<KafkaMessageListenerContainer>> containerMap;
+
+    static final String PAGE = "/page";
+    static NoticeMessageService noticeMessageService;
     static KafkaTemplate<String, Object> kafkaTemplate;
     static String connectTopic;
     static String disconnectTopic;
+    static NoticeDispatcher noticeDispatcher;
     static RedisTemplate<String, Object> redisTemplate;
+    static ObjectMapper objectMapper;
     private static ConcurrentHashMap<Long, Session> sessionPool = new ConcurrentHashMap<>();
     private static CopyOnWriteArraySet<WsController> webSocketSet = new CopyOnWriteArraySet<>();
-    private String socketId;
+    String socketId;
+
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        WsController.objectMapper = objectMapper;
+    }
 
     @Autowired
     public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
@@ -59,8 +64,8 @@ public class WsController {
     }
 
     @Autowired
-    public void setMessageStrategy(InteractionMessageStrategy messageStrategy) {
-        WsController.messageStrategy = messageStrategy;
+    public void setNoticeDispatcher(NoticeDispatcher noticeDispatcher) {
+        WsController.noticeDispatcher = noticeDispatcher;
     }
 
     @Autowired
@@ -70,24 +75,24 @@ public class WsController {
 
     @Autowired
 
-    public void setInteractionMessageService(InteractionMessageService interactionMessageService) {
-        WsController.interactionMessageService = interactionMessageService;
-    }
-
-    @Resource
-    public void setContainerMap(Map<String, List<KafkaMessageListenerContainer>> containerMap) {
-        WsController.containerMap = containerMap;
+    public void setInteractionMessageService(NoticeMessageService noticeMessageService) {
+        WsController.noticeMessageService = noticeMessageService;
     }
 
     @OnOpen
     public void onOpen(Session session, @PathParam("userId") Long userId) {
         log.info("WebSocket建立连接中,连接用户ID：{}", userId);
-        this.socketId = session.getId();
+        socketId = session.getId();
         webSocketSet.add(this);
         sessionPool.put(userId, session);
-        redisTemplate.opsForHash().put(CacheKey.BOUND_CONNECT_INFO.getKey(), STR. "\{ userId }:\{ this.socketId }" , this.socketId);
+        redisTemplate.opsForHash().put(CacheKey.BOUND_CONNECT_INFO.getKey(), STR. "\{ userId }:\{ socketId }" , socketId);
         kafkaTemplate.send(connectTopic, userId);
-        new MessageContext(messageStrategy).send(List.of(), session, userId);
+        noticeDispatcher.addSession(userId, session);
+    }
+
+    @OnMessage
+    public void onMessage(String message, Session session, @PathParam("userId") Long userId) {
+
     }
 
     @OnClose
@@ -95,19 +100,11 @@ public class WsController {
         log.info("WebSocket断开连接,用户ID：{}", userId);
         webSocketSet.remove(this);
         BoundHashOperations<String, Object, Object> operations = redisTemplate.boundHashOps(CacheKey.BOUND_CONNECT_INFO.getKey());
-        operations.delete(STR. "\{ userId }:\{ this.socketId }" );
+        operations.delete(STR. "\{ userId }:\{ socketId }" );
         try (Cursor<Map.Entry<Object, Object>> cursor = operations.scan(ScanOptions.scanOptions().match(STR. "\{ userId }*" ).build())) {
             if (!cursor.hasNext()) {
                 kafkaTemplate.send(disconnectTopic, userId);
             }
         }
-        List<KafkaMessageListenerContainer> container = containerMap.get(userId.toString());
-        container.forEach(con -> {
-            if (con.isRunning()) {
-                log.info("销毁kafka容器{}", con.getContainerProperties().getClientId());
-                con.stop();
-                con.destroy();
-            }
-        });
     }
 }

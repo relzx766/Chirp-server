@@ -68,7 +68,7 @@ public class TweetedEventAssembler {
                                             .createTime(new Timestamp(System.currentTimeMillis()))
                                             .noticeType(NoticeType.USER.name())
                                             .build();
-                                    kafkaTemplate.send(STR. "\{ tweeted }-\{ messageDto.getReceiverId() }" , messageDto);
+                                    kafkaTemplate.send(tweeted, messageDto);
                                 }
                             });
                         }

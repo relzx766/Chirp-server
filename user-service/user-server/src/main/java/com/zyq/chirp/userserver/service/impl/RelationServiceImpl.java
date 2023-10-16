@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zyq.chirp.adviceclient.dto.EntityType;
 import com.zyq.chirp.adviceclient.dto.EventType;
+import com.zyq.chirp.adviceclient.dto.NoticeType;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.common.exception.ChirpException;
 import com.zyq.chirp.common.model.Code;
@@ -18,6 +19,10 @@ import com.zyq.chirp.userserver.service.RelationService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -36,10 +41,14 @@ public class RelationServiceImpl implements RelationService {
     @Resource
     DefaultKafkaProducer<Object> producer;
     @Value("${mq.topic.site-message.follow}")
-    String followTopic;
+    String follow;
     @Value("${mq.topic.unfollow}")
     String unfollowTopic;
     Integer expire = 6;
+    @Resource
+    KafkaTemplate<String, Object> kafkaTemplate;
+    @Resource
+    RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public Relation getRelationType(Long fromId, Long toId) {
@@ -99,6 +108,7 @@ public class RelationServiceImpl implements RelationService {
 
 
     @Override
+    @Cacheable(key = "#fromId+':'+#toId")
     public void follow(Long fromId, Long toId) {
         if (Objects.isNull(fromId) || Objects.isNull(toId)) {
             throw new ChirpException(Code.ERR_BUSINESS, "信息不完善");
@@ -109,16 +119,25 @@ public class RelationServiceImpl implements RelationService {
                 new Timestamp(System.currentTimeMillis()),
                 RelationType.FOLLOWING.getRelation());
         relationMapper.replace(relation);
-        SiteMessageDto messageDto = SiteMessageDto.builder()
-                .receiverId(toId)
-                .event(EventType.FOLLOW.name())
-                .entityType(EntityType.USER.name())
-                .senderId(fromId)
-                .build();
-        producer.avoidRedundancySend(fromId + ":" + toId, followTopic, messageDto, Duration.ofHours(expire));
+        Thread.ofVirtual().start(() -> {
+            Boolean absent = redisTemplate.opsForValue().setIfAbsent(STR. "\{ EventType.FOLLOW.name() }:\{ fromId }:\{ toId }" , 1, Duration.ofHours(expire));
+            if (Boolean.TRUE.equals(absent)) {
+                SiteMessageDto messageDto = SiteMessageDto.builder()
+                        .receiverId(toId)
+                        .event(EventType.FOLLOW.name())
+                        .entityType(EntityType.USER.name())
+                        .noticeType(NoticeType.USER.name())
+                        .senderId(fromId)
+                        .build();
+                kafkaTemplate.send(follow, messageDto);
+            }
+
+        });
+
     }
 
     @Override
+    @CacheEvict(key = "#fromId+':'+#toId")
     public void unfollow(Long fromId, Long toId) {
         if (Objects.isNull(fromId) || Objects.isNull(toId)) {
             throw new ChirpException(Code.ERR_BUSINESS, "信息不完善");
@@ -134,7 +153,7 @@ public class RelationServiceImpl implements RelationService {
                 .eq(Relation::getStatus, relation.getStatus()));
         Message<RelationDto> message = new Message<>();
         message.setBody(relationConvertor.pojoToDto(relation));
-        producer.send(unfollowTopic, message);
+        kafkaTemplate.send(unfollowTopic, message);
     }
 
     @Override

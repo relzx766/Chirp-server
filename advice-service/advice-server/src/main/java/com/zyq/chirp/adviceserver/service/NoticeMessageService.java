@@ -6,7 +6,7 @@ import com.zyq.chirp.adviceserver.domain.pojo.Notification;
 import java.util.Collection;
 import java.util.List;
 
-public interface InteractionMessageService {
+public interface NoticeMessageService {
     void save(Notification notification);
 
     void saveBatch(Collection<Notification> notifications);
@@ -25,14 +25,4 @@ public interface InteractionMessageService {
     void markAsRead(Long messageId, Long receiverId);
 
     void markAsRead(Collection<Long> messageIds, Long receiverId);
-
-
-    /**
-     * 将消息所需的一切信息组装，如实体信息
-     *
-     * @param messageDtos 简略消息
-     * @return 详细消息
-     */
-    List<SiteMessageDto> combine(Collection<SiteMessageDto> messageDtos);
-
 }

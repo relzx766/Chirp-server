@@ -93,4 +93,6 @@ public interface ChirperService {
     Map<Object, Map<String, Object>> getTrend(Integer page, String type);
 
     Map<Long, List<Long>> getAllIdByAuthors(Collection<Long> userIds);
+
+    Long getAuthorIdByChirperId(Long chirperId);
 }

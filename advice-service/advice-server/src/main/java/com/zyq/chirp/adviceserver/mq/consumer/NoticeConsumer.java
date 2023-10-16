@@ -3,7 +3,7 @@ package com.zyq.chirp.adviceserver.mq.consumer;
 import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
 import com.zyq.chirp.adviceserver.convertor.MessageConvertor;
 import com.zyq.chirp.adviceserver.domain.pojo.Notification;
-import com.zyq.chirp.adviceserver.service.InteractionMessageService;
+import com.zyq.chirp.adviceserver.service.NoticeMessageService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,13 +21,13 @@ public class NoticeConsumer {
     @Resource
     protected KafkaTemplate<String, SiteMessageDto> kafkaTemplate;
     @Resource
-    InteractionMessageService interactionMessageService;
+    NoticeMessageService noticeMessageService;
     @Resource
     MessageConvertor messageConvertor;
     @Value("${mq.topic.site-message.interaction}")
     String interactionTopic;
 
-    @KafkaListener(topicPattern = "#{'${mq.topic.site-message.interaction}'+'-.*'}",
+    @KafkaListener(topics = "${mq.topic.site-message.notice}",
             groupId = "${mq.consumer.group.interaction}",
             batch = "true", concurrency = "4")
     public void receiver(@Payload List<SiteMessageDto> messageDtos, Acknowledgment ack) {
@@ -40,7 +40,7 @@ public class NoticeConsumer {
                     return notification;
                 })
                 .toList();
-        interactionMessageService.saveBatch(notifications);
+        noticeMessageService.saveBatch(notifications);
         log.info("写入完成，开始提交偏移量");
         ack.acknowledge();
         log.info("偏移量提交完成");
