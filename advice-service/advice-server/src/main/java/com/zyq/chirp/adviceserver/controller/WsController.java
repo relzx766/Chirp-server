@@ -1,13 +1,18 @@
 package com.zyq.chirp.adviceserver.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zyq.chirp.adviceclient.dto.ChatDto;
+import com.zyq.chirp.adviceclient.enums.MessageTypeEnum;
 import com.zyq.chirp.adviceserver.domain.enums.CacheKey;
-import com.zyq.chirp.adviceserver.mq.dispatcher.NoticeDispatcher;
-import com.zyq.chirp.adviceserver.service.NoticeMessageService;
-import jakarta.websocket.OnClose;
-import jakarta.websocket.OnMessage;
-import jakarta.websocket.OnOpen;
-import jakarta.websocket.Session;
+import com.zyq.chirp.adviceserver.domain.enums.ChatStatusEnum;
+import com.zyq.chirp.adviceserver.domain.enums.WsActionEnum;
+import com.zyq.chirp.adviceserver.mq.dispatcher.MessageDispatcher;
+import com.zyq.chirp.adviceserver.mq.listener.RedisSubscribeListener;
+import com.zyq.chirp.adviceserver.service.ChatService;
+import com.zyq.chirp.common.exception.ChirpException;
+import com.zyq.chirp.common.model.Code;
+import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +22,12 @@ import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -29,17 +37,24 @@ import java.util.concurrent.CopyOnWriteArraySet;
 @Slf4j
 public class WsController {
 
-    static final String PAGE = "/page";
-    static NoticeMessageService noticeMessageService;
     static KafkaTemplate<String, Object> kafkaTemplate;
     static String connectTopic;
     static String disconnectTopic;
-    static NoticeDispatcher noticeDispatcher;
+    static String messageTopic;
+    static MessageDispatcher messageDispatcher;
     static RedisTemplate<String, Object> redisTemplate;
     static ObjectMapper objectMapper;
+    static ChatService chatService;
+    static RedisMessageListenerContainer redisMessageListenerContainer;
     private static ConcurrentHashMap<Long, Session> sessionPool = new ConcurrentHashMap<>();
     private static CopyOnWriteArraySet<WsController> webSocketSet = new CopyOnWriteArraySet<>();
     String socketId;
+    RedisSubscribeListener subscribeListener;
+
+    @Autowired
+    public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
+        WsController.redisMessageListenerContainer = redisMessageListenerContainer;
+    }
 
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
@@ -49,6 +64,11 @@ public class WsController {
     @Autowired
     public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
         WsController.redisTemplate = redisTemplate;
+    }
+
+    @Autowired
+    public void setPrivateMessageService(ChatService chatService) {
+        WsController.chatService = chatService;
     }
 
     @Value("${mq.topic.socket-connect}")
@@ -63,20 +83,20 @@ public class WsController {
         WsController.disconnectTopic = disconnectTopic;
     }
 
+    @Value("${mq.topic.site-message.user}")
+
+    public void setMessageTopic(String messageTopic) {
+        WsController.messageTopic = messageTopic;
+    }
+
     @Autowired
-    public void setNoticeDispatcher(NoticeDispatcher noticeDispatcher) {
-        WsController.noticeDispatcher = noticeDispatcher;
+    public void setNoticeDispatcher(MessageDispatcher messageDispatcher) {
+        WsController.messageDispatcher = messageDispatcher;
     }
 
     @Autowired
     public void setKafkaTemplate(KafkaTemplate<String, Object> kafkaTemplate) {
         WsController.kafkaTemplate = kafkaTemplate;
-    }
-
-    @Autowired
-
-    public void setInteractionMessageService(NoticeMessageService noticeMessageService) {
-        WsController.noticeMessageService = noticeMessageService;
     }
 
     @OnOpen
@@ -87,12 +107,27 @@ public class WsController {
         sessionPool.put(userId, session);
         redisTemplate.opsForHash().put(CacheKey.BOUND_CONNECT_INFO.getKey(), STR. "\{ userId }:\{ socketId }" , socketId);
         kafkaTemplate.send(connectTopic, userId);
-        noticeDispatcher.addSession(userId, session);
+        subscribeListener = new RedisSubscribeListener(session);
+        redisMessageListenerContainer.addMessageListener(subscribeListener, new ChannelTopic(messageTopic + userId));
     }
 
     @OnMessage
     public void onMessage(String message, Session session, @PathParam("userId") Long userId) {
 
+        if (WsActionEnum.HEARTBEAT.name().equalsIgnoreCase(message)) {
+            session.getAsyncRemote().sendText(WsActionEnum.HEARTBEAT.name());
+        } else {
+            try {
+                ChatDto chatDto = objectMapper.readValue(message, ChatDto.class);
+                chatDto.setSenderId(userId);
+                chatService.send(chatDto);
+                chatDto.setStatus(ChatStatusEnum.UNREAD.getStatus());
+                session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnum.CHAT.name(), List.of(chatDto))));
+            } catch (JsonProcessingException e) {
+                throw new ChirpException(Code.ERR_BUSINESS, "json转化失败,请检查消息格式");
+            }
+
+        }
     }
 
     @OnClose
@@ -107,4 +142,10 @@ public class WsController {
             }
         }
     }
+
+    @OnError
+    public void onError(Session session, @PathParam("userId") Long userId, Throwable error) {
+        log.error("{}", error);
+    }
+
 }

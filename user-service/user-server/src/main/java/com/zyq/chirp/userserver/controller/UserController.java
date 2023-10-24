@@ -84,7 +84,7 @@ public class UserController {
     }
 
     @PostMapping("/basic_info")
-    public ResponseEntity<List<UserDto>> getBasicInfo(@RequestParam("ids") List<Long> userIds) {
+    public ResponseEntity<List<UserDto>> getBasicInfo(@RequestParam("ids") Collection<Long> userIds) {
         return ResponseEntity.ok(userService.getBasicInfo(userIds));
     }
 

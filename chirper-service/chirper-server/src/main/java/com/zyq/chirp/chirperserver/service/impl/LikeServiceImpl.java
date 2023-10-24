@@ -2,9 +2,9 @@ package com.zyq.chirp.chirperserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zyq.chirp.adviceclient.dto.EntityType;
-import com.zyq.chirp.adviceclient.dto.EventType;
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
+import com.zyq.chirp.adviceclient.dto.NotificationDto;
+import com.zyq.chirp.adviceclient.enums.EntityType;
+import com.zyq.chirp.adviceclient.enums.EventType;
 import com.zyq.chirp.chirpclient.dto.LikeDto;
 import com.zyq.chirp.chirperserver.aspect.Statistic;
 import com.zyq.chirp.chirperserver.domain.enums.CacheKey;
@@ -62,13 +62,13 @@ public class LikeServiceImpl implements LikeService {
         Thread.ofVirtual().start(() -> {
             Boolean absent = redisTemplate.opsForValue().setIfAbsent(STR. "\{ EventType.LIKE.name() }:\{ likeDto.getUserId() }:\{ likeDto.getChirperId() }" , 1, Duration.ofHours(expire));
             if (Boolean.TRUE.equals(absent)) {
-                SiteMessageDto siteMessageDto = SiteMessageDto.builder()
+                NotificationDto notificationDto = NotificationDto.builder()
                         .sonEntity(String.valueOf(likeDto.getChirperId()))
                         .event(EventType.LIKE.name())
                         .entityType(EntityType.CHIRPER.name())
                         .senderId(likeDto.getUserId())
                         .build();
-                kafkaTemplate.send(topic, siteMessageDto);
+                kafkaTemplate.send(topic, notificationDto);
             }
 
         });

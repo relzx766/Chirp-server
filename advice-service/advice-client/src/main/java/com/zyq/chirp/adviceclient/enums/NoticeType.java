@@ -1,4 +1,4 @@
-package com.zyq.chirp.adviceclient.dto;
+package com.zyq.chirp.adviceclient.enums;
 
 public enum NoticeType {
     USER,

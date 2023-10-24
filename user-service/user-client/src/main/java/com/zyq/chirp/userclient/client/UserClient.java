@@ -24,7 +24,7 @@ public interface UserClient {
 
 
     @PostMapping("/user/basic_info")
-    ResponseEntity<List<UserDto>> getShort(@RequestParam("ids") List<Long> userIds);
+    ResponseEntity<List<UserDto>> getBasicInfo(@RequestParam("ids") Collection<Long> userIds);
 
     @PostMapping("/user/id_info")
     ResponseEntity<List<Long>> getIdByUsername(@RequestParam("username") Collection<String> username);

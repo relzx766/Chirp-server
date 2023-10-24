@@ -1,10 +1,10 @@
 package com.zyq.chirp.adviceserver.mq.Assembler;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import com.zyq.chirp.adviceclient.dto.EntityType;
-import com.zyq.chirp.adviceclient.dto.EventType;
-import com.zyq.chirp.adviceclient.dto.NoticeType;
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
+import com.zyq.chirp.adviceclient.dto.NotificationDto;
+import com.zyq.chirp.adviceclient.enums.EntityType;
+import com.zyq.chirp.adviceclient.enums.EventType;
+import com.zyq.chirp.adviceclient.enums.NoticeType;
 import com.zyq.chirp.authclient.client.AuthClient;
 import com.zyq.chirp.common.mq.Message;
 import com.zyq.chirp.feedclient.dto.FeedDto;
@@ -30,7 +30,7 @@ public class TweetedEventAssembler {
     @Value("${default-config.follower-query-size}")
     Integer querySize;
     @Resource
-    KafkaTemplate<String, SiteMessageDto> kafkaTemplate;
+    KafkaTemplate<String, NotificationDto> kafkaTemplate;
     @Resource
     UserClient userClient;
     @Resource
@@ -58,7 +58,7 @@ public class TweetedEventAssembler {
                             onlineMap.forEach((follower, onlineStatus) -> {
                                 //在线就推送
                                 if (onlineStatus) {
-                                    SiteMessageDto messageDto = SiteMessageDto.builder()
+                                    NotificationDto messageDto = NotificationDto.builder()
                                             .id(IdWorker.getId())
                                             .receiverId(Long.parseLong(follower))
                                             .senderId(Long.parseLong(feedDto.getPublisher()))

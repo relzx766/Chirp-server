@@ -1,6 +1,8 @@
 package com.zyq.chirp.userclient.dto;
 
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -17,6 +19,7 @@ import java.sql.Timestamp;
 @NoArgsConstructor
 public class UserDto implements Serializable {
     private static final long serialVersionUID = 123451111L;
+    @JsonSerialize(using = ToStringSerializer.class)
 
     private Long id;
     @Length(min = 4, max = 30, message = "用户名长度应该为4-30")

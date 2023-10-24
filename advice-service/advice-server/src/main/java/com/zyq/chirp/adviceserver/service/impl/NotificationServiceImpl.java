@@ -3,11 +3,11 @@ package com.zyq.chirp.adviceserver.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
-import com.zyq.chirp.adviceserver.convertor.MessageConvertor;
+import com.zyq.chirp.adviceclient.dto.NotificationDto;
+import com.zyq.chirp.adviceserver.convertor.NoticeConvertor;
 import com.zyq.chirp.adviceserver.domain.pojo.Notification;
-import com.zyq.chirp.adviceserver.mapper.NoticeMessageMapper;
-import com.zyq.chirp.adviceserver.service.NoticeMessageService;
+import com.zyq.chirp.adviceserver.mapper.NotificationMapper;
+import com.zyq.chirp.adviceserver.service.NotificationService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
@@ -17,11 +17,11 @@ import java.util.Collection;
 import java.util.List;
 
 @Service
-public class NoticeMessageImpl implements NoticeMessageService {
+public class NotificationServiceImpl implements NotificationService {
     @Resource
-    NoticeMessageMapper noticeMessageMapper;
+    NotificationMapper notificationMapper;
     @Resource
-    MessageConvertor messageConvertor;
+    NoticeConvertor noticeConvertor;
     @Value("${default-config.page-size}")
     Integer pageSize;
     @Resource
@@ -37,7 +37,7 @@ public class NoticeMessageImpl implements NoticeMessageService {
      */
     @Override
     public void save(Notification notification) {
-        noticeMessageMapper.insert(notification);
+        notificationMapper.insert(notification);
     }
 
     /**
@@ -47,28 +47,28 @@ public class NoticeMessageImpl implements NoticeMessageService {
      */
     @Override
     public void saveBatch(Collection<Notification> notifications) {
-        noticeMessageMapper.insertBatch(notifications);
+        notificationMapper.insertBatch(notifications);
     }
 
     @Override
-    public List<SiteMessageDto> getByReceiverId(Long receiverId) {
-        return noticeMessageMapper.selectList(new LambdaQueryWrapper<Notification>()
+    public List<NotificationDto> getByReceiverId(Long receiverId) {
+        return notificationMapper.selectList(new LambdaQueryWrapper<Notification>()
                         .eq(Notification::getReceiverId, receiverId)
                         .orderByDesc(Notification::getCreateTime))
                 .stream()
-                .map(notification -> messageConvertor.pojoToDto(notification)).toList();
+                .map(notification -> noticeConvertor.pojoToDto(notification)).toList();
     }
 
     @Override
-    public List<SiteMessageDto> getPageByReceiverId(Integer page, Long receiverId) {
+    public List<NotificationDto> getPageByReceiverId(Integer page, Long receiverId) {
         Page<Notification> searchPage = new Page<>(page, pageSize);
         searchPage.setSearchCount(false);
-        Page<Notification> notice = noticeMessageMapper.selectPage(searchPage, new LambdaQueryWrapper<Notification>()
+        Page<Notification> notice = notificationMapper.selectPage(searchPage, new LambdaQueryWrapper<Notification>()
                 .eq(Notification::getReceiverId, receiverId)
                 .orderByDesc(Notification::getCreateTime));
         if (!notice.getRecords().isEmpty()) {
             return notice.getRecords().stream()
-                    .map(notification -> messageConvertor.pojoToDto(notification))
+                    .map(notification -> noticeConvertor.pojoToDto(notification))
                     .toList();
         }
         return List.of();
@@ -76,28 +76,28 @@ public class NoticeMessageImpl implements NoticeMessageService {
 
     @Override
     public Integer getUnReadCount(Long receiverId) {
-        return Math.toIntExact(noticeMessageMapper.selectCount(new LambdaQueryWrapper<Notification>().eq(Notification::getReceiverId, receiverId)
+        return Math.toIntExact(notificationMapper.selectCount(new LambdaQueryWrapper<Notification>().eq(Notification::getReceiverId, receiverId)
                 .eq(Notification::getIsRead, false)));
     }
 
     @Override
     public void readAll(Long receiverId) {
-        noticeMessageMapper.update(null, new LambdaUpdateWrapper<Notification>()
+        notificationMapper.update(null, new LambdaUpdateWrapper<Notification>()
                 .set(Notification::getIsRead, true)
                 .eq(Notification::getReceiverId, receiverId)
                 .eq(Notification::getIsRead, false));
     }
 
     @Override
-    public List<SiteMessageDto> getUnReadByReceiverId(Long receiverId) {
-        return noticeMessageMapper.getUnReadByReceiverId(receiverId).stream()
-                .map(message -> messageConvertor.pojoToDto(message))
+    public List<NotificationDto> getUnReadByReceiverId(Long receiverId) {
+        return notificationMapper.getUnReadByReceiverId(receiverId).stream()
+                .map(message -> noticeConvertor.pojoToDto(message))
                 .toList();
     }
 
     @Override
     public void markAsRead(Long messageId, Long receiverId) {
-        noticeMessageMapper.update(null, new LambdaUpdateWrapper<Notification>()
+        notificationMapper.update(null, new LambdaUpdateWrapper<Notification>()
                 .eq(Notification::getId, messageId)
                 .eq(Notification::getReceiverId, receiverId)
                 .set(Notification::getIsRead, true));
@@ -105,7 +105,7 @@ public class NoticeMessageImpl implements NoticeMessageService {
 
     @Override
     public void markAsRead(Collection<Long> messageIds, Long receiverId) {
-        noticeMessageMapper.update(null, new LambdaUpdateWrapper<Notification>()
+        notificationMapper.update(null, new LambdaUpdateWrapper<Notification>()
                 .eq(Notification::getReceiverId, receiverId)
                 .in(Notification::getId, messageIds)
                 .set(Notification::getIsRead, true));

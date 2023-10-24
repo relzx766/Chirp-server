@@ -2,8 +2,9 @@ package com.zyq.chirp.adviceserver.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zyq.chirp.adviceclient.dto.EntityType;
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
+import com.zyq.chirp.adviceclient.dto.NotificationDto;
+import com.zyq.chirp.adviceclient.enums.EntityType;
+import com.zyq.chirp.adviceclient.enums.EventType;
 import com.zyq.chirp.adviceserver.service.SiteMessageAssembleService;
 import com.zyq.chirp.chirpclient.client.ChirperClient;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
@@ -33,14 +34,14 @@ public class SiteMessageAssembleServiceImpl implements SiteMessageAssembleServic
     UserClient userClient;
 
     @Override
-    public List<SiteMessageDto> assemble(List<SiteMessageDto> messageDtos) {
-        List<SiteMessageDto> chirper = new ArrayList<>();
-        List<SiteMessageDto> user = new ArrayList<>();
-        List<SiteMessageDto> other = new ArrayList<>();
+    public List<NotificationDto> assemble(List<NotificationDto> messageDtos) {
+        List<NotificationDto> chirper = new ArrayList<>();
+        List<NotificationDto> user = new ArrayList<>();
+        List<NotificationDto> other = new ArrayList<>();
         messageDtos.forEach(siteMessageDto -> {
             if (EntityType.CHIRPER.name().equals(siteMessageDto.getEntityType())) {
                 chirper.add(siteMessageDto);
-            } else if (EntityType.USER.name().equals(siteMessageDto.getEntityType())) {
+            } else if (EntityType.USER.name().equals(siteMessageDto.getEntityType()) || EventType.CHAT.name().equals(siteMessageDto.getEvent())) {
                 user.add(siteMessageDto);
             } else {
                 other.add(siteMessageDto);
@@ -57,7 +58,7 @@ public class SiteMessageAssembleServiceImpl implements SiteMessageAssembleServic
         return other;
     }
 
-    public List<SiteMessageDto> chirperAssemble(List<SiteMessageDto> messageDtos) {
+    public List<NotificationDto> chirperAssemble(List<NotificationDto> messageDtos) {
         try {
             List<Long> chirperIds = new ArrayList<>();
             List<Long> senderIds = new ArrayList<>();
@@ -80,7 +81,7 @@ public class SiteMessageAssembleServiceImpl implements SiteMessageAssembleServic
                 return List.of();
             });
             CompletableFuture<List<UserDto>> userFuture = CompletableFuture.supplyAsync(()
-                    -> userClient.getShort(senderIds).getBody()
+                    -> userClient.getBasicInfo(senderIds).getBody()
             ).exceptionally(throwable -> {
                 throwable.printStackTrace();
                 return List.of();
@@ -109,10 +110,10 @@ public class SiteMessageAssembleServiceImpl implements SiteMessageAssembleServic
         return messageDtos;
     }
 
-    public List<SiteMessageDto> userAssemble(List<SiteMessageDto> messageDtos) {
+    public List<NotificationDto> userAssemble(List<NotificationDto> messageDtos) {
         try {
-            List<Long> senderIds = messageDtos.stream().map(SiteMessageDto::getSenderId).toList();
-            Map<Long, UserDto> senderMap = Objects.requireNonNull(userClient.getShort(senderIds).getBody())
+            List<Long> senderIds = messageDtos.stream().map(NotificationDto::getSenderId).toList();
+            Map<Long, UserDto> senderMap = Objects.requireNonNull(userClient.getBasicInfo(senderIds).getBody())
                     .stream().collect(Collectors.toMap(UserDto::getId, Function.identity()));
             messageDtos.forEach(messageDto -> {
                 UserDto sender = senderMap.get(messageDto.getSenderId());
@@ -124,4 +125,5 @@ public class SiteMessageAssembleServiceImpl implements SiteMessageAssembleServic
         }
         return messageDtos;
     }
+
 }

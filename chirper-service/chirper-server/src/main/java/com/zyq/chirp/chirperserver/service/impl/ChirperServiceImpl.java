@@ -7,10 +7,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zyq.chirp.adviceclient.dto.EntityType;
-import com.zyq.chirp.adviceclient.dto.EventType;
-import com.zyq.chirp.adviceclient.dto.NoticeType;
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
+import com.zyq.chirp.adviceclient.dto.NotificationDto;
+import com.zyq.chirp.adviceclient.enums.EntityType;
+import com.zyq.chirp.adviceclient.enums.EventType;
+import com.zyq.chirp.adviceclient.enums.NoticeType;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.aspect.ParseMentioned;
 import com.zyq.chirp.chirperserver.aspect.Statistic;
@@ -146,7 +146,7 @@ public class ChirperServiceImpl implements ChirperService {
         if (!isInsert || !isSet) {
             throw new ChirpException(Code.ERR_BUSINESS, "回复失败");
         }
-        SiteMessageDto message = SiteMessageDto.builder()
+        NotificationDto message = NotificationDto.builder()
                 .sonEntity(chirperDto.getInReplyToChirperId().toString())
                 .entity(chirper.getId().toString())
                 .event(EventType.REPLY.name())
@@ -240,7 +240,7 @@ public class ChirperServiceImpl implements ChirperService {
         Thread.ofVirtual().start(() -> {
             Boolean absent = redisTemplate.opsForValue().setIfAbsent(STR. "\{ EventType.FORWARD.name() }:\{ userId }:\{ chirperId }" , 1, Duration.ofHours(expire));
             if (Boolean.TRUE.equals(absent)) {
-                SiteMessageDto messageDto = SiteMessageDto.builder()
+                NotificationDto messageDto = NotificationDto.builder()
                         .sonEntity(String.valueOf(chirperId))
                         .entityType(EntityType.CHIRPER.name())
                         .event(EventType.FORWARD.name())
@@ -306,7 +306,7 @@ public class ChirperServiceImpl implements ChirperService {
                 throw new ChirpException(Code.ERR_BUSINESS, "发布失败");
             }
 
-            SiteMessageDto messageDto = SiteMessageDto.builder()
+            NotificationDto messageDto = NotificationDto.builder()
                     .sonEntity(chirperDto.getReferencedChirperId().toString())
                     .entity(chirper.getId().toString())
                     .noticeType(NoticeType.USER.name())
@@ -520,7 +520,7 @@ public class ChirperServiceImpl implements ChirperService {
             List<Long> userIds = chirperDtos.stream().map(ChirperDto::getAuthorId).toList();
             //获取所有的用户信息
             CompletableFuture<Map<Long, UserDto>> userFuture = CompletableFuture.supplyAsync(() ->
-                    userClient.getShort(userIds).getBody().stream().collect(Collectors.toMap(UserDto::getId, Function.identity()))
+                    userClient.getBasicInfo(userIds).getBody().stream().collect(Collectors.toMap(UserDto::getId, Function.identity()))
             ).exceptionally(throwable -> {
                 throwable.printStackTrace();
                 return Map.of();

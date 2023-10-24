@@ -1,9 +1,9 @@
 package com.zyq.chirp.chirperserver.aspect;
 
-import com.zyq.chirp.adviceclient.dto.EntityType;
-import com.zyq.chirp.adviceclient.dto.EventType;
-import com.zyq.chirp.adviceclient.dto.NoticeType;
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
+import com.zyq.chirp.adviceclient.dto.NotificationDto;
+import com.zyq.chirp.adviceclient.enums.EntityType;
+import com.zyq.chirp.adviceclient.enums.EventType;
+import com.zyq.chirp.adviceclient.enums.NoticeType;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.domain.enums.CacheKey;
 import com.zyq.chirp.common.exception.ChirpException;
@@ -66,7 +66,7 @@ public class ParseMentionedAspect {
             List<String> usernames = TextUtil.findMentioned(chirperDto.getText());
             if (!usernames.isEmpty()) {
                 userClient.getIdByUsername(usernames).getBody().forEach(id -> {
-                    SiteMessageDto messageDto = SiteMessageDto.builder()
+                    NotificationDto messageDto = NotificationDto.builder()
                             .senderId(chirperDto.getAuthorId())
                             .receiverId(id)
                             .event(EventType.MENTIONED.name())

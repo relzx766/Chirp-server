@@ -77,7 +77,8 @@ mq:
       interaction: advice_interaction_consumer
       tweeted: advice_tweeted_consumer
       user: advice_user_consumer
-      notice: advice_notice_consumer
+      site-message: advice_site_message_consumer
+      chat: advice_chat_consumer
   topic:
     tweeted: tweeted
     # 通知关注者已更新的topic
@@ -93,8 +94,10 @@ mq:
       interaction: interaction
       tweeted-advice: tweeted-advice
       notice: notice
+      chat: chat
+      user: user
 default-config:
-  page-size: 20
+  page-size: 100
   follower-query-size: 1000
 server:
   port: 8084

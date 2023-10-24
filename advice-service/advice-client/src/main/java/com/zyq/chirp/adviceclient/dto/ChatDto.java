@@ -1,25 +1,32 @@
-package com.zyq.chirp.userclient.dto;
+package com.zyq.chirp.adviceclient.dto;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.sql.Timestamp;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class RelationDto {
-    @JsonSerialize(using = ToStringSerializer.class)
+@SuperBuilder
+public class ChatDto extends SiteMessage {
 
-    private Long fromId;
     @JsonSerialize(using = ToStringSerializer.class)
-
-    private Long toId;
+    /*
+      临时id，前端可用此判断消息是否发送成功
+     */
+    private Long tempId;
+    private String conversationId;
+    private String content;
+    private String type;
     private Timestamp createTime;
     private Integer status;
+
+
 }

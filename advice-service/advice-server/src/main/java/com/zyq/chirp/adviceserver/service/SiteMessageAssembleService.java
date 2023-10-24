@@ -1,9 +1,9 @@
 package com.zyq.chirp.adviceserver.service;
 
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
+import com.zyq.chirp.adviceclient.dto.NotificationDto;
 
 import java.util.List;
 
 public interface SiteMessageAssembleService {
-    List<SiteMessageDto> assemble(List<SiteMessageDto> messageDtos);
+    List<NotificationDto> assemble(List<NotificationDto> messageDtos);
 }

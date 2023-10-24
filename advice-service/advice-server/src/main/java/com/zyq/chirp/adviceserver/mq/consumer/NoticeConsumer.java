@@ -1,9 +1,9 @@
 package com.zyq.chirp.adviceserver.mq.consumer;
 
-import com.zyq.chirp.adviceclient.dto.SiteMessageDto;
-import com.zyq.chirp.adviceserver.convertor.MessageConvertor;
+import com.zyq.chirp.adviceclient.dto.NotificationDto;
+import com.zyq.chirp.adviceserver.convertor.NoticeConvertor;
 import com.zyq.chirp.adviceserver.domain.pojo.Notification;
-import com.zyq.chirp.adviceserver.service.NoticeMessageService;
+import com.zyq.chirp.adviceserver.service.NotificationService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,28 +19,28 @@ import java.util.List;
 @Slf4j
 public class NoticeConsumer {
     @Resource
-    protected KafkaTemplate<String, SiteMessageDto> kafkaTemplate;
+    protected KafkaTemplate<String, NotificationDto> kafkaTemplate;
     @Resource
-    NoticeMessageService noticeMessageService;
+    NotificationService notificationService;
     @Resource
-    MessageConvertor messageConvertor;
+    NoticeConvertor noticeConvertor;
     @Value("${mq.topic.site-message.interaction}")
     String interactionTopic;
 
     @KafkaListener(topics = "${mq.topic.site-message.notice}",
             groupId = "${mq.consumer.group.interaction}",
             batch = "true", concurrency = "4")
-    public void receiver(@Payload List<SiteMessageDto> messageDtos, Acknowledgment ack) {
-        log.info("消费到互动消息，开始准备写入数据库");
+    public void receiver(@Payload List<NotificationDto> messageDtos, Acknowledgment ack) {
+        log.info("消费到通知，开始准备写入数据库");
         List<Notification> notifications = messageDtos.stream()
                 .map(messageDto -> {
-                    Notification notification = messageConvertor.dtoToPojo(messageDto);
+                    Notification notification = noticeConvertor.dtoToPojo(messageDto);
                     notification.setIsRead(false);
                     notification.setStatus(true);
                     return notification;
                 })
                 .toList();
-        noticeMessageService.saveBatch(notifications);
+        notificationService.saveBatch(notifications);
         log.info("写入完成，开始提交偏移量");
         ack.acknowledge();
         log.info("偏移量提交完成");

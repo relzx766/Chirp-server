@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Repository
-public interface NoticeMessageMapper extends BaseMapper<Notification> {
+public interface NotificationMapper extends BaseMapper<Notification> {
 
     int insertBatch(@Param("messages") Collection<Notification> notifications);
 
