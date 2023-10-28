@@ -2,7 +2,8 @@ package com.zyq.chirp.adviceserver.domain.enums;
 
 public enum ChatTypeEnum {
     TEXT,
-    MEDIA,
+    IMAGE,
+    VOICE,
     FILE;
 
     public static ChatTypeEnum getEnum(String type) {

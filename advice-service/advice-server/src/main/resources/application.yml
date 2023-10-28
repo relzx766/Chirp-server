@@ -99,6 +99,7 @@ mq:
 default-config:
   page-size: 100
   follower-query-size: 1000
+  conversation-cache-size: 10
 server:
   port: 8084
 sa-token:

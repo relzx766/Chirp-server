@@ -14,7 +14,21 @@ public interface ChatService {
 
     void addBatch(Collection<ChatDto> chatDtos);
 
+    /**
+     * 缓存每个话题下最新的部分消息
+     *
+     * @param chatList 消息列表
+     */
+    void cacheChatByScore(Collection<ChatDto> chatList);
+
+    /**
+     * 在缓存中获取话题最新部分
+     */
+    List<Long> getConvTop(Collection<String> conversations);
+
     void deleteById(Long messageId);
+
+    List<ChatDto> getById(Collection<Long> messageIds);
 
     Map<String, List<ChatDto>> getChatByConversation(Collection<String> conversations, Integer page);
 

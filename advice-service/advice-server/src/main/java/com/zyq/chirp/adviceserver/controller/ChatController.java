@@ -8,7 +8,6 @@ import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,18 +20,14 @@ public class ChatController {
     @Resource
     MessageAssembleStrategy<ChatDto> assemble;
 
-    @GetMapping("/page/{page}")
-    public ResponseEntity<Map<String, Map<String, Object>>> getPage(@PathVariable("page") Integer page) {
+    @GetMapping("/index")
+    public ResponseEntity<List<ChatDto>> getIndexPage() {
         long receiverId = StpUtil.getLoginIdAsLong();
         Set<String> conversations = chatService.getConversationByUserId(receiverId);
-        Map<String, List<ChatDto>> chatDtoMap = chatService.getChatByConversation(conversations, page);
-        Map<String, Map<String, Object>> data = new HashMap<>();
-        Map<String, Integer> unreadCount = chatService.getUnreadCount(conversations, receiverId);
-        chatDtoMap.forEach((s, chatDtos) -> {
-            assemble.assemble(chatDtos);
-            data.put(s, Map.of("data", chatDtos, "unreadCount", unreadCount.get(s)));
-        });
-        return ResponseEntity.ok(data);
+        List<Long> messageIds = chatService.getConvTop(conversations);
+        List<ChatDto> chatDtos = chatService.getById(messageIds);
+        assemble.assemble(chatDtos);
+        return ResponseEntity.ok(chatDtos);
     }
 
     @GetMapping("/history/page/{page}/{senderId}")

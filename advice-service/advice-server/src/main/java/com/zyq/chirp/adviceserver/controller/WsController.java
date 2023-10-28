@@ -124,6 +124,7 @@ public class WsController {
                 chatDto.setStatus(ChatStatusEnum.UNREAD.getStatus());
                 session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnum.CHAT.name(), List.of(chatDto))));
             } catch (JsonProcessingException e) {
+                e.printStackTrace();
                 throw new ChirpException(Code.ERR_BUSINESS, "json转化失败,请检查消息格式");
             }
 
