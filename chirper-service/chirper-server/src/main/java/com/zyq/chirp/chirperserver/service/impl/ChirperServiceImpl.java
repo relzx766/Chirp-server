@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
 import com.zyq.chirp.adviceclient.enums.EntityType;
@@ -45,8 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -84,29 +81,15 @@ public class ChirperServiceImpl implements ChirperService {
     @Override
     @ParseMentioned
     public ChirperDto save(ChirperDto chirperDto) {
-
-        try {
-            List<Integer> medias = null;
-            if (chirperDto.getMediaKeys() != null) {
-                medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
-                });
-                if (medias != null && medias.isEmpty()) {
-                    chirperDto.setMediaKeys(null);
-                }
-            }
-            if (medias == null || medias.size() > 9) {
-                if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {
-                    throw new ChirpException(Code.ERR_BUSINESS, "推文格式错误，推文为空或媒体文件超过9个");
-                }
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        if (chirperDto.isEmpty()) {
+            throw new ChirpException(Code.ERR_BUSINESS, "推文内容不能为空");
         }
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
         chirper.setConversationId(chirper.getId());
         chirper.setStatus(ChirperStatus.ACTIVE.getStatus());
         chirper.setType(ChirperType.ORIGINAL.toString());
+        chirper.setCreateTime(new Timestamp(System.currentTimeMillis()));
         chirperMapper.insert(chirper);
         return chirperConvertor.pojoToDto(chirper);
     }
@@ -116,23 +99,8 @@ public class ChirperServiceImpl implements ChirperService {
     @Statistic(id = "#chirperDto.inReplyToChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
     @ParseMentioned
     public ChirperDto reply(ChirperDto chirperDto) {
-        try {
-            List<Integer> medias = null;
-            if (chirperDto.getMediaKeys() != null) {
-                medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
-                });
-                if (medias != null && medias.isEmpty()) {
-                    chirperDto.setMediaKeys(null);
-                }
-            }
-            if (medias == null || medias.isEmpty() || medias.size() > 9) {
-                if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {
-                    throw new ChirpException(Code.ERR_BUSINESS, "推文格式错误，推文为空或媒体文件超过9个");
-
-                }
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        if (chirperDto.isEmpty()) {
+            throw new ChirpException(Code.ERR_BUSINESS, "推文内容不能为空");
         }
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
@@ -272,23 +240,8 @@ public class ChirperServiceImpl implements ChirperService {
     @Statistic(id = "#chirperDto.referencedChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
     @ParseMentioned
     public ChirperDto quote(ChirperDto chirperDto) {
-        try {
-            List<Integer> medias = null;
-            if (chirperDto.getMediaKeys() != null) {
-                medias = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
-                });
-                if (medias != null && medias.isEmpty()) {
-                    chirperDto.setMediaKeys(null);
-                }
-            }
-            if (medias == null || medias.isEmpty() || medias.size() > 9) {
-                if (chirperDto.getText() == null || chirperDto.getText().trim().isEmpty()) {
-                    throw new ChirpException(Code.ERR_BUSINESS, "推文格式错误，推文为空或媒体文件超过9个");
-
-                }
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        if (chirperDto.isEmpty()) {
+            throw new ChirpException(Code.ERR_BUSINESS, "推文内容不能为空");
         }
         Chirper refer = chirperMapper.selectOne(new LambdaQueryWrapper<Chirper>().select(Chirper::getAuthorId).eq(Chirper::getId, chirperDto.getReferencedChirperId()));
         if (refer != null) {
@@ -499,7 +452,7 @@ public class ChirperServiceImpl implements ChirperService {
     public List<ChirperDto> combineWithMedia(Collection<ChirperDto> chirperDtos) {
         try {
             if (chirperDtos == null || chirperDtos.isEmpty()) {
-                return new ArrayList<>(chirperDtos);
+                return List.of();
             }
             //提取出所有的媒体信息
             Map<Long, List<Integer>> map = chirperDtos.stream()
@@ -509,53 +462,52 @@ public class ChirperServiceImpl implements ChirperService {
                             if (chirperDto.getReferenced() != null) {
                                 chirperDto.setReferenced(this.combineWithMedia(List.of(chirperDto.getReferenced())).get(0));
                             }
-                            List<Integer> mediaKeys = objectMapper.readValue(chirperDto.getMediaKeys(), new TypeReference<>() {
-                            });
+                            List<Integer> mediaKeys = chirperDto.getMediaKeys().stream().map(MediaDto::getId).toList();
                             return Map.entry(chirperDto.getId(), mediaKeys);
-                        } catch (JsonProcessingException | IllegalArgumentException e) {
-                            log.warn("媒体key转换失败;{}", e.getMessage());
+                        } catch (NullPointerException e) {
                             return Map.entry(chirperDto.getId(), List.<Integer>of());
                         }
                     }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            List<Long> userIds = chirperDtos.stream().map(ChirperDto::getAuthorId).toList();
-            //获取所有的用户信息
-            CompletableFuture<Map<Long, UserDto>> userFuture = CompletableFuture.supplyAsync(() ->
-                    userClient.getBasicInfo(userIds).getBody().stream().collect(Collectors.toMap(UserDto::getId, Function.identity()))
-            ).exceptionally(throwable -> {
-                throwable.printStackTrace();
-                return Map.of();
-            });
-            //获取所有媒体信息
-            CompletableFuture<Map<Long, List<MediaDto>>> mediaFuture = CompletableFuture.supplyAsync(() ->
-                    mediaClient.getCombine(map).getBody()
-            ).exceptionally(throwable -> {
-                throwable.printStackTrace();
-                return Map.of();
-            });
-            //等待线程完成
-            CompletableFuture<Void> allOf = CompletableFuture.allOf(userFuture, mediaFuture);
-            allOf.join();
-            Map<Long, List<MediaDto>> mediaMap = mediaFuture.get();
-            Map<Long, UserDto> userDtoMap = userFuture.get();
-
-            chirperDtos.forEach(chirperDto -> {
+            Map<Long, List<MediaDto>> mediaMap = new HashMap<>();
+            Map<Long, UserDto> userDtoMap = new HashMap<>();
+            CountDownLatch latch = new CountDownLatch(2);
+            Thread.ofVirtual().start(() -> {
                 try {
-                    if (mediaMap != null && !mediaMap.isEmpty()) {
-                        String json = objectMapper.writeValueAsString(mediaMap.get(chirperDto.getId()));
-                        chirperDto.setMediaKeys(json);
+                    List<Long> userIds = chirperDtos.stream().map(ChirperDto::getAuthorId).toList();
+                    Map<Long, UserDto> userCollect = userClient.getBasicInfo(userIds).getBody().stream().collect(Collectors.toMap(UserDto::getId, Function.identity()));
+                    userDtoMap.putAll(userCollect);
+                } catch (Exception e) {
+                    log.error("{}", e);
+                } finally {
+                    latch.countDown();
+                }
+
+            });
+            Thread.ofVirtual().start(() -> {
+                try {
+                    Map<Long, List<MediaDto>> medias = mediaClient.getCombine(map).getBody();
+                    mediaMap.putAll(medias);
+                } catch (Exception e) {
+                    log.error("{}", e);
+                } finally {
+                    latch.countDown();
+                }
+            });
+            latch.await();
+            chirperDtos.forEach(chirperDto -> {
+                if (!mediaMap.isEmpty()) {
+                    List<MediaDto> mediaDtos = mediaMap.get(chirperDto.getId());
+                    mediaDtos = mediaDtos != null ? mediaDtos : List.of();
+                    chirperDto.setMediaKeys(mediaDtos);
                     }
-                    if (userDtoMap != null && !userDtoMap.isEmpty()) {
+                if (!userDtoMap.isEmpty()) {
                         UserDto userDto = userDtoMap.get(chirperDto.getAuthorId());
                         chirperDto.setUsername(userDto.getUsername());
                         chirperDto.setNickname(userDto.getNickname());
                         chirperDto.setAvatar(userDto.getSmallAvatarUrl());
                     }
-                } catch (JsonProcessingException e) {
-                    log.warn("媒体值转换为json失败{}", e.getMessage());
-                    chirperDto.setMediaKeys("");
-                }
             });
-        } catch (ExecutionException | InterruptedException e) {
+        } catch (InterruptedException e) {
             throw new ChirpException(e);
         }
         return new ArrayList<>(chirperDtos);

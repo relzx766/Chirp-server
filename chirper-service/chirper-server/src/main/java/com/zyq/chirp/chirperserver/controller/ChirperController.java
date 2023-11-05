@@ -32,7 +32,7 @@ public class ChirperController {
                         "mediaKeys":"媒体链接，json格式"
                         text与mediaKeys有一个不为空
                     }""")*/
-            @RequestBody ChirperDto chirperDto) {
+            @RequestBody @Validated ChirperDto chirperDto) {
         chirperDto.setAuthorId(StpUtil.getLoginIdAsLong());
         return ResponseEntity.ok().body(chirperService.save(chirperDto));
     }

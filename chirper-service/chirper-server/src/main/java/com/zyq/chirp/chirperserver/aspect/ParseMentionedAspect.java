@@ -81,14 +81,17 @@ public class ParseMentionedAspect {
     }
 
     public void sendPublish(ChirperDto chirperDto) {
-        FeedDto feedDto = FeedDto.builder()
-                .publisher(chirperDto.getAuthorId().toString())
-                .contentId(chirperDto.getId().toString())
-                .score((double) chirperDto.getCreateTime().getTime())
-                .build();
-        Message<FeedDto> message = new Message<>();
-        message.setBody(feedDto);
-        kafkaTemplate.send(publishTopic, feedDto.getPublisher(), message);
+        Thread.ofVirtual().start(() -> {
+            FeedDto feedDto = FeedDto.builder()
+                    .publisher(chirperDto.getAuthorId().toString())
+                    .contentId(chirperDto.getId().toString())
+                    .score((double) chirperDto.getCreateTime().getTime())
+                    .build();
+            Message<FeedDto> message = new Message<>();
+            message.setBody(feedDto);
+            kafkaTemplate.send(publishTopic, feedDto.getPublisher(), message);
+        });
+
     }
 
     public void parseTend(List<ChirperDto> chirperDtos) {

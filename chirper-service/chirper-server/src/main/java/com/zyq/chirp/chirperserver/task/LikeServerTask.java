@@ -1,3 +1,4 @@
+/*
 package com.zyq.chirp.chirperserver.task;
 
 import com.zyq.chirp.chirpclient.dto.LikeDto;
@@ -125,3 +126,4 @@ public class LikeServerTask {
         log.info("----end 持久化点赞数量");
     }
 }
+*/

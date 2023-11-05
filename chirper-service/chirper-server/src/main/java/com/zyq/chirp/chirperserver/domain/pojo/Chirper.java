@@ -4,16 +4,18 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 @AllArgsConstructor
 @Data
 @Builder
-@TableName("tb_chirper")
+@TableName(value = "tb_chirper", autoResultMap = true)
 public class Chirper {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
@@ -25,8 +27,8 @@ public class Chirper {
     private String text;
     private String type;
     private Long referencedChirperId;
-    @TableField(value = "media_keys")
-    private String mediaKeys;
+    @TableField(value = "media_keys", typeHandler = JacksonTypeHandler.class)
+    private List<Integer> mediaKeys;
     private Integer viewCount;
     private Integer likeCount;
     private Integer forwardCount;

@@ -1,4 +1,4 @@
-package com.zyq.chirp.mediaserver.controller;
+package com.zyq.chirp.feedserver.controller;
 
 import com.zyq.chirp.common.model.enumration.HttpHeader;
 import org.springframework.http.ResponseEntity;

@@ -17,6 +17,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>media-client</artifactId>
+            <version>1.0</version>
+        </dependency>
         <!-- 微服务相关依赖 -->
         <!-- feign-->
         <dependency>

@@ -1,13 +1,16 @@
 package com.zyq.chirp.chirpclient.dto;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.zyq.chirp.mediaclient.dto.MediaDto;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -29,14 +32,14 @@ public class ChirperDto {
     private Long inReplyToChirperId;
 
     private Timestamp createTime;
-    @Length(max = 500)
+    @Length(max = 500, message = "最大字数为500")
     private String text;
     private String type;
     @NotNull(groups = Quote.class, message = "引用对象不能为空")
     private Long referencedChirperId;
     private ChirperDto referenced;
-    private String mediaKeys;
-
+    @Size(max = 9, message = "最多支持9个媒体文件")
+    private List<MediaDto> mediaKeys;
     private Integer viewCount;
     private Integer likeCount;
     private Integer forwardCount;
@@ -63,5 +66,9 @@ public class ChirperDto {
     }
 
     public interface Quote {
+    }
+
+    public boolean isEmpty() {
+        return (text == null || text.trim().isEmpty()) && (mediaKeys == null || mediaKeys.isEmpty());
     }
 }

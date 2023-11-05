@@ -17,22 +17,23 @@ public class ExceptionController {
     public ResponseEntity<String> argumentNotValidHandler(MethodArgumentNotValidException e) {
         e.printStackTrace();
         List<ObjectError> allErrors = e.getBindingResult().getAllErrors();
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (ObjectError error : allErrors) {
             sb.append(error.getDefaultMessage()).append(";\n");
         }
-        return ResponseEntity.badRequest()
-                .header(HttpHeader.MESSAGE.name(),
-                        Base64.getEncoder().encodeToString(sb.toString().getBytes(StandardCharsets.UTF_8)))
-                .build();
+        return this.buildRes(sb.toString());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> exHandler(Exception e) {
         e.printStackTrace();
+        return this.buildRes(e.getMessage());
+    }
+
+    public ResponseEntity<String> buildRes(String message) {
         return ResponseEntity.badRequest()
                 .header(HttpHeader.MESSAGE.name(),
-                        Base64.getEncoder().encodeToString(e.getMessage().getBytes(StandardCharsets.UTF_8)))
+                        Base64.getEncoder().encodeToString(message.getBytes(StandardCharsets.UTF_8)))
                 .build();
     }
 }
