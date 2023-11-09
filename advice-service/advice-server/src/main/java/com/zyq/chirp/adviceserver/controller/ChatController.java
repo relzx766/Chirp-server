@@ -17,6 +17,7 @@ import java.util.Set;
 public class ChatController {
     @Resource
     ChatService chatService;
+
     @Resource
     MessageAssembleStrategy<ChatDto> assemble;
 
@@ -48,4 +49,15 @@ public class ChatController {
         return ResponseEntity.ok(null);
     }
 
+    @GetMapping("/delete/mark/{id}")
+    public ResponseEntity<String> markAsDelete(@PathVariable("id") Long id) {
+        chatService.markAsDel(id, StpUtil.getLoginIdAsLong());
+        return ResponseEntity.ok(null);
+    }
+
+    @GetMapping("/leave/{id}")
+    public ResponseEntity<String> leaveConversation(@PathVariable("id") String id) {
+        chatService.markAsDel(id, StpUtil.getLoginIdAsLong());
+        return ResponseEntity.ok(null);
+    }
 }

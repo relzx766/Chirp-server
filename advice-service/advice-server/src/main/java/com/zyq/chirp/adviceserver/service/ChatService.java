@@ -28,14 +28,19 @@ public interface ChatService {
 
     void deleteById(Long messageId);
 
+    void markAsDel(Long messageId, Long userId);
+
+    void markAsDel(String conversationId, Long userId);
+
     List<ChatDto> getById(Collection<Long> messageIds);
 
-    Map<String, List<ChatDto>> getChatByConversation(Collection<String> conversations, Integer page);
+    Map<String, List<ChatDto>> getChatByConversation(Collection<String> conversations, Long userId, Integer page);
 
-    List<ChatDto> getChatHistory(Long receiverId, Long senderId, Integer page);
+    List<ChatDto> getChatHistory(Long currentUserId, Long otherUserId, Integer page);
 
-    List<ChatDto> getChatHistory(String conversationId, Integer page, Integer size);
+    List<ChatDto> getChatHistory(String conversationId, Long userId, Integer page, Integer size);
 
+    List<ChatDto> getReference(List<ChatDto> chatDtos);
 
     Map<String, Integer> getUnreadCount(Collection<String> conversation, Long receiverId);
 

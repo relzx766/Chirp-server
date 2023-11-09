@@ -30,7 +30,7 @@ public class ChatSendSendStrategy implements MessageSendStrategy<ChatDto> {
     public void send(List<ChatDto> messageDtos, Collection<Session> sessions) {
         assembleStrategy.assemble(messageDtos);
         messageDtos.forEach(chatDto -> {
-            chatDto.setStatus(ChatStatusEnum.UNREAD.getStatus());
+            chatDto.setStatus(ChatStatusEnum.UNREAD.name());
         });
         sessions.forEach(session -> {
             try {

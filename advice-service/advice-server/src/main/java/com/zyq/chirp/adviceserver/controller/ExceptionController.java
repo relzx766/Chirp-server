@@ -13,6 +13,7 @@ import java.util.List;
 
 @RestControllerAdvice
 public class ExceptionController {
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<String> argumentNotValidHandler(MethodArgumentNotValidException e) {
         e.printStackTrace();

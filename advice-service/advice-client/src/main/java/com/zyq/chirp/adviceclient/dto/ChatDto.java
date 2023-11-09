@@ -25,8 +25,9 @@ public class ChatDto extends SiteMessage {
     private String conversationId;
     private String content;
     private String type;
+    private ChatDto reference;
     private Timestamp createTime;
-    private Integer status;
+    private String status;
 
 
 }

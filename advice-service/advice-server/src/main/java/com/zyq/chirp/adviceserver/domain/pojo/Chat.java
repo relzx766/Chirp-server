@@ -23,6 +23,10 @@ public class Chat {
     String conversationId;
     String content;
     String type;
+    Long referenceId;
     Timestamp createTime;
-    Integer status;
+    /**
+     * 删除时为删除者id，对话双方都删除时，更换为枚举
+     */
+    String status;
 }

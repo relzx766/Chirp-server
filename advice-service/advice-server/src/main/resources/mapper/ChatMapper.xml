@@ -2,7 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.zyq.chirp.adviceserver.mapper.ChatMapper">
     <insert id="insertBatch">
-        insert into tb_private_message(id, sender_id, receiver_id,conversation_id, content, type, create_time, status)
+        insert into tb_private_message(id, sender_id, receiver_id,conversation_id, content, type,reference_id,
+        create_time, status)
         VALUES
         <foreach collection="messages" item="message" separator=",">
             (#{message.id},
@@ -11,8 +12,18 @@
             #{message.conversationId},
             #{message.content},
             #{message.type},
+            #{message.referenceId},
             #{message.createTime} ,
             #{message.status})
         </foreach>
     </insert>
+
+    <update id="updateStatusBatch">
+        update tb_private_message tpm join
+        (<foreach collection="chats" item="chat" separator="union all">
+        select #{chat.id} as id
+    </foreach>) temp
+        on tpm.id=temp.id
+        set tpm.status=#{status}
+    </update>
 </mapper>

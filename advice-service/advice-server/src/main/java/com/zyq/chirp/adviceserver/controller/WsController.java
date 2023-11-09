@@ -121,7 +121,7 @@ public class WsController {
                 ChatDto chatDto = objectMapper.readValue(message, ChatDto.class);
                 chatDto.setSenderId(userId);
                 chatService.send(chatDto);
-                chatDto.setStatus(ChatStatusEnum.UNREAD.getStatus());
+                chatDto.setStatus(ChatStatusEnum.UNREAD.name());
                 session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnum.CHAT.name(), List.of(chatDto))));
             } catch (JsonProcessingException e) {
                 e.printStackTrace();

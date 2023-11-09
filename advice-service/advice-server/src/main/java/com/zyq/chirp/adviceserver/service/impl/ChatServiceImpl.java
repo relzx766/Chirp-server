@@ -1,5 +1,6 @@
 package com.zyq.chirp.adviceserver.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
@@ -53,18 +55,26 @@ public class ChatServiceImpl implements ChatService {
         if (ChatTypeEnum.getEnum(chatDto.getType()) == null) {
             chatDto.setType(ChatTypeEnum.TEXT.name());
         }
+        //为防止用户篡改信息，仅发送引用消息的id，同时保存引用消息
+        ChatDto referCopy = chatDto.getReference();
+        Optional.ofNullable(referCopy).ifPresent(reference -> {
+            ChatDto refer = ChatDto.builder().id(reference.getId()).build();
+            chatDto.setReference(refer);
+        });
         chatDto.setId(IdWorker.getId());
         String conversationId = ChatUtil.mathConversationId(chatDto.getSenderId(), chatDto.getReceiverId());
         chatDto.setConversationId(conversationId);
         chatDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
-        chatDto.setStatus(ChatStatusEnum.SENDING.getStatus());
+        chatDto.setStatus(ChatStatusEnum.SENDING.name());
         kafkaTemplate.send(topic, chatDto);
+        //将引用消息写回
+        chatDto.setReference(referCopy);
     }
 
     @Override
     public void add(ChatDto chatDto) {
         Chat chat = convertor.dtoToPojo(chatDto);
-        chat.setStatus(ChatStatusEnum.UNREAD.getStatus());
+        chat.setStatus(ChatStatusEnum.UNREAD.name());
         messageMapper.insert(chat);
     }
 
@@ -73,7 +83,7 @@ public class ChatServiceImpl implements ChatService {
 
         List<Chat> list = chatDtos.stream().map(chatDto -> {
             Chat chat = convertor.dtoToPojo(chatDto);
-            chat.setStatus(ChatStatusEnum.UNREAD.getStatus());
+            chat.setStatus(ChatStatusEnum.UNREAD.name());
             return chat;
         }).toList();
         messageMapper.insertBatch(list);
@@ -121,11 +131,60 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    public void markAsDel(Long messageId, Long userId) {
+        boolean update = messageMapper.update(null, new LambdaUpdateWrapper<Chat>()
+                .set(Chat::getStatus, userId)
+                .eq(Chat::getId, messageId)
+                .and(true, chatLambdaUpdateWrapper ->
+                        chatLambdaUpdateWrapper.eq(Chat::getSenderId, userId)
+                                .or()
+                                .eq(Chat::getReceiverId, userId))
+                .in(Chat::getStatus, ChatStatusEnum.READ.name(), ChatStatusEnum.UNREAD.name())) > 0;
+        //更新失败则代表对方以删除
+        if (!update) {
+            messageMapper.update(null, new LambdaUpdateWrapper<Chat>()
+                    .set(Chat::getStatus, ChatStatusEnum.DELETE.name())
+                    .and(true, chatLambdaUpdateWrapper ->
+                            chatLambdaUpdateWrapper.eq(Chat::getSenderId, userId)
+                                    .or()
+                                    .eq(Chat::getReceiverId, userId))
+                    .eq(Chat::getId, messageId));
+        }
+    }
+
+    @Override
+    public void markAsDel(String conversationId, Long userId) {
+        String[] member = ChatUtil.splitConversation(conversationId);
+        boolean isMember = false;
+        for (String uId : member) {
+            if (uId.equals(userId.toString())) {
+                isMember = true;
+                break;
+            }
+        }
+        if (isMember) {
+            Map<String, List<Chat>> collect = messageMapper.selectList(new LambdaQueryWrapper<Chat>()
+                            .select(Chat::getId, Chat::getStatus)
+                            .eq(Chat::getConversationId, conversationId))
+                    .stream()
+                    .filter(chat -> !chat.getStatus().equals(ChatStatusEnum.DELETE.name()) || !chat.getStatus().equals(userId.toString()))
+                    .collect(Collectors.groupingBy(Chat::getStatus));
+            collect.forEach((status, chatList) -> {
+                if (ChatStatusEnum.READ.name().equals(status) || ChatStatusEnum.UNREAD.name().equals(status)) {
+                    messageMapper.updateStatusBatch(chatList, userId.toString());
+                } else {
+                    messageMapper.updateStatusBatch(chatList, ChatStatusEnum.DELETE.name());
+                }
+            });
+        }
+    }
+
+    @Override
     public List<ChatDto> getById(Collection<Long> messageIds) {
         if (messageIds != null && !messageIds.isEmpty()) {
             return messageMapper.selectList(new LambdaQueryWrapper<Chat>()
                             .in(Chat::getId, messageIds)
-                            .in(Chat::getStatus, ChatStatusEnum.UNREAD.getStatus(), ChatStatusEnum.READ.getStatus())
+                            .notIn(Chat::getStatus, ChatStatusEnum.DELETE, StpUtil.getLoginIdAsLong())
                             .orderByDesc(Chat::getCreateTime))
                     .stream()
                     .map(chat -> convertor.pojoToDto(chat))
@@ -136,14 +195,14 @@ public class ChatServiceImpl implements ChatService {
 
 
     @Override
-    public Map<String, List<ChatDto>> getChatByConversation(Collection<String> conversations, Integer page) {
+    public Map<String, List<ChatDto>> getChatByConversation(Collection<String> conversations, Long userId, Integer page) {
         Page<Chat> searchPage = new Page<>(page, pageSize);
         searchPage.setSearchCount(false);
         Map<String, List<ChatDto>> messageDtos = new HashMap<>();
         CountDownLatch latch = new CountDownLatch(conversations.size());
         conversations.forEach(conversation -> {
             Thread.startVirtualThread(() -> {
-                List<ChatDto> messages = this.getChatHistory(conversation, page, pageSize);
+                List<ChatDto> messages = this.getChatHistory(conversation, userId, page, pageSize);
                 messageDtos.put(conversation, messages);
                 latch.countDown();
             });
@@ -157,18 +216,18 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public List<ChatDto> getChatHistory(Long receiverId, Long senderId, Integer page) {
-        String conversationId = ChatUtil.mathConversationId(senderId, receiverId);
-        return getChatHistory(conversationId, page, pageSize);
+    public List<ChatDto> getChatHistory(Long currentUserId, Long otherUserId, Integer page) {
+        String conversationId = ChatUtil.mathConversationId(otherUserId, currentUserId);
+        return getChatHistory(conversationId, currentUserId, page, pageSize);
     }
 
     @Override
-    public List<ChatDto> getChatHistory(String conversationId, Integer page, Integer size) {
+    public List<ChatDto> getChatHistory(String conversationId, Long userId, Integer page, Integer size) {
         Page<Chat> searchPage = new Page<>(page, size);
         searchPage.setSearchCount(false);
-        return messageMapper.selectPage(searchPage, new LambdaQueryWrapper<Chat>()
+        List<ChatDto> chatDtos = messageMapper.selectPage(searchPage, new LambdaQueryWrapper<Chat>()
                         .eq(Chat::getConversationId, conversationId)
-                        .in(Chat::getStatus, ChatStatusEnum.READ.getStatus(), ChatStatusEnum.UNREAD.getStatus())
+                        .notIn(Chat::getStatus, ChatStatusEnum.DELETE, userId)
                         .orderByDesc(Chat::getCreateTime))
                 .getRecords()
                 .stream()
@@ -176,6 +235,34 @@ public class ChatServiceImpl implements ChatService {
                         convertor.pojoToDto(chat)
                 )
                 .toList();
+        return this.getReference(chatDtos);
+    }
+
+    @Override
+    public List<ChatDto> getReference(List<ChatDto> chatDtos) {
+        Set<Long> referenceIds = new HashSet<>();
+        chatDtos.stream().map(ChatDto::getReference).forEach(reference -> {
+            if (reference != null && reference.getId() != null) {
+                referenceIds.add(reference.getId());
+            }
+        });
+        if (!referenceIds.isEmpty()) {
+            Map<Long, Chat> referMap = messageMapper.selectList(new LambdaQueryWrapper<Chat>()
+                            .in(Chat::getId, referenceIds)
+                            .notIn(Chat::getStatus, ChatStatusEnum.DELETE.name()))
+                    .stream().collect(Collectors.toMap(Chat::getId, Function.identity()));
+            chatDtos.forEach(chatDto -> {
+                ChatDto reference = chatDto.getReference();
+                if (reference != null && reference.getId() != null) {
+                    Chat chat = referMap.get(reference.getId());
+                    Optional.ofNullable(chat)
+                            .ifPresent(present -> {
+                                chatDto.setReference(convertor.pojoToDto(present));
+                            });
+                }
+            });
+        }
+        return chatDtos;
     }
 
     @Override
@@ -187,7 +274,7 @@ public class ChatServiceImpl implements ChatService {
                 countMap.put(con, messageMapper.selectCount(new LambdaQueryWrapper<Chat>()
                         .eq(Chat::getConversationId, con)
                         .eq(Chat::getReceiverId, receiverId)
-                        .eq(Chat::getStatus, ChatStatusEnum.UNREAD.getStatus())).intValue());
+                        .eq(Chat::getStatus, ChatStatusEnum.UNREAD)).intValue());
                 latch.countDown();
             });
         });
@@ -203,8 +290,8 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public void markAsRead(Collection<String> conversationIds, Long receiverId) {
         messageMapper.update(null, new LambdaUpdateWrapper<Chat>()
-                .set(Chat::getStatus, ChatStatusEnum.READ.getStatus())
-                .eq(Chat::getStatus, ChatStatusEnum.UNREAD.getStatus())
+                .set(Chat::getStatus, ChatStatusEnum.READ)
+                .eq(Chat::getStatus, ChatStatusEnum.UNREAD)
                 .in(Chat::getConversationId, conversationIds)
                 .eq(Chat::getReceiverId, receiverId));
     }
@@ -212,10 +299,10 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public Set<String> getConversationByUserId(Long userId) {
         return messageMapper.selectList(new LambdaQueryWrapper<Chat>()
-                .eq(Chat::getReceiverId, userId)
-                .or()
-                .eq(Chat::getSenderId, userId)
-                .in(Chat::getStatus, ChatStatusEnum.UNREAD.getStatus(), ChatStatusEnum.READ.getStatus())
+                .notIn(Chat::getStatus, ChatStatusEnum.DELETE, userId)
+                .and(true, chatLambdaQueryWrapper -> chatLambdaQueryWrapper.eq(Chat::getReceiverId, userId)
+                        .or()
+                        .eq(Chat::getSenderId, userId))
                 .select(Chat::getConversationId)).stream().map(Chat::getConversationId).collect(Collectors.toSet());
     }
 
