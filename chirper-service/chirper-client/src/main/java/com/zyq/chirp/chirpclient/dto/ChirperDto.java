@@ -1,5 +1,6 @@
 package com.zyq.chirp.chirpclient.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
 import jakarta.validation.constraints.NotNull;
@@ -68,6 +69,7 @@ public class ChirperDto {
     public interface Quote {
     }
 
+    @JsonIgnore
     public boolean isEmpty() {
         return (text == null || text.trim().isEmpty()) && (mediaKeys == null || mediaKeys.isEmpty());
     }

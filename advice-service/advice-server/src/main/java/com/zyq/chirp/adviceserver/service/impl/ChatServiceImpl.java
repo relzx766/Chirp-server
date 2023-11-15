@@ -74,16 +74,20 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public void add(ChatDto chatDto) {
         Chat chat = convertor.dtoToPojo(chatDto);
-        chat.setStatus(ChatStatusEnum.UNREAD.name());
+        ChatStatusEnum status = Objects.equals(chat.getSenderId(), chat.getReceiverId()) ? ChatStatusEnum.READ : ChatStatusEnum.UNREAD;
+        chat.setStatus(status.name());
         messageMapper.insert(chat);
     }
 
     @Override
     public void addBatch(Collection<ChatDto> chatDtos) {
-
         List<Chat> list = chatDtos.stream().map(chatDto -> {
             Chat chat = convertor.dtoToPojo(chatDto);
-            chat.setStatus(ChatStatusEnum.UNREAD.name());
+            if (chat.getSenderId().equals(chat.getReceiverId())) {
+                chat.setStatus(ChatStatusEnum.READ.name());
+            } else {
+                chat.setStatus(ChatStatusEnum.UNREAD.name());
+            }
             return chat;
         }).toList();
         messageMapper.insertBatch(list);
@@ -140,7 +144,7 @@ public class ChatServiceImpl implements ChatService {
                                 .or()
                                 .eq(Chat::getReceiverId, userId))
                 .in(Chat::getStatus, ChatStatusEnum.READ.name(), ChatStatusEnum.UNREAD.name())) > 0;
-        //更新失败则代表对方以删除
+        //更新失败则代表对方已删除
         if (!update) {
             messageMapper.update(null, new LambdaUpdateWrapper<Chat>()
                     .set(Chat::getStatus, ChatStatusEnum.DELETE.name())

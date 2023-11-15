@@ -21,9 +21,12 @@ public interface ChirperConvertor {
     @Named("mediaId")
     default List<Integer> getMediaId(List<MediaDto> mediaDtos) {
         if (mediaDtos == null) {
-            return List.of();
+            return null;
+        } else if (mediaDtos.isEmpty()) {
+            return null;
+        } else {
+            return mediaDtos.stream().map(MediaDto::getId).toList();
         }
-        return mediaDtos.stream().map(MediaDto::getId).toList();
     }
 
     @Named("mediaConvertor")

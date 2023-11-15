@@ -43,6 +43,10 @@ public class UserController {
         return ResponseEntity.ok(null);
     }
 
+    @GetMapping("/load")
+    public ResponseEntity<UserDto> loadUser() {
+        return ResponseEntity.ok(userService.getById(StpUtil.getLoginIdAsLong(), null));
+    }
     @GetMapping("/profile/{account}")
     public ResponseEntity<UserDto> getProfile(@PathVariable("account") String account,
                                               @Nullable @RequestParam("type") String type) {

@@ -47,4 +47,5 @@ public interface ChatService {
     void markAsRead(Collection<String> conversationIds, Long receiverId);
 
     Set<String> getConversationByUserId(Long userId);
+
 }
