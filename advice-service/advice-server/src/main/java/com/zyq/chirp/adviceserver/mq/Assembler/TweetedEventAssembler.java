@@ -6,7 +6,7 @@ import com.zyq.chirp.adviceclient.enums.EntityType;
 import com.zyq.chirp.adviceclient.enums.EventType;
 import com.zyq.chirp.adviceclient.enums.NoticeType;
 import com.zyq.chirp.authclient.client.AuthClient;
-import com.zyq.chirp.common.mq.Message;
+import com.zyq.chirp.common.mq.model.Message;
 import com.zyq.chirp.feedclient.dto.FeedDto;
 import com.zyq.chirp.userclient.client.UserClient;
 import jakarta.annotation.Resource;

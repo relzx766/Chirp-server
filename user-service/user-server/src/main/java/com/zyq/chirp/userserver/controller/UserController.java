@@ -119,5 +119,13 @@ public class UserController {
         return ResponseEntity.ok(userService.getByIds(following, null));
     }
 
+    @GetMapping("/username/check/{username}")
+    public ResponseEntity<Boolean> checkUsername(@PathVariable("username") String username) {
+        return ResponseEntity.ok(userService.isExistByUsername(username));
+    }
 
+    @GetMapping("/email/check/{email}")
+    public ResponseEntity<Boolean> checkEmail(@PathVariable("email") String email) {
+        return ResponseEntity.ok(userService.isExistByEmail(email));
+    }
 }

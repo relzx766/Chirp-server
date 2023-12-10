@@ -7,7 +7,7 @@ import com.zyq.chirp.adviceserver.domain.enums.ChatStatusEnum;
 import com.zyq.chirp.adviceserver.exception.SendFailedException;
 import com.zyq.chirp.adviceserver.strategy.MessageAssembleStrategy;
 import com.zyq.chirp.adviceserver.strategy.MessageSendStrategy;
-import com.zyq.chirp.common.model.Code;
+import com.zyq.chirp.common.domain.model.Code;
 import jakarta.annotation.Resource;
 import jakarta.websocket.Session;
 import lombok.extern.slf4j.Slf4j;

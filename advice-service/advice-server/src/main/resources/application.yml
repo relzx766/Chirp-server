@@ -52,10 +52,16 @@ spring:
 
   data:
     redis:
-      database: 0
-      host: localhost
-      port: 6379
-      password:
+      cluster:
+        nodes:
+          - 192.168.233.111:6379
+          - 192.168.233.111:6380
+          - 192.168.233.111:6381
+          - 192.168.233.111:6382
+          - 192.168.233.111:6383
+          - 192.168.233.111:6384
+        max-redirects: 3
+      password: 1234
       timeout: 6000ms
       lettuce:
         pool:

@@ -1,7 +1,7 @@
 package com.zyq.chirp.mediaserver.controller;
 
-import com.zyq.chirp.common.exception.ChirpException;
-import com.zyq.chirp.common.model.Code;
+import com.zyq.chirp.common.domain.exception.ChirpException;
+import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
 import com.zyq.chirp.mediaserver.service.MediaService;
 import com.zyq.chirp.mediaserver.util.FileUtil;

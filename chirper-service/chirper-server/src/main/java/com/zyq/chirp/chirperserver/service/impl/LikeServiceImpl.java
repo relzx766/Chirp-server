@@ -12,8 +12,8 @@ import com.zyq.chirp.chirperserver.domain.enums.LikeType;
 import com.zyq.chirp.chirperserver.domain.pojo.Like;
 import com.zyq.chirp.chirperserver.mapper.LikeMapper;
 import com.zyq.chirp.chirperserver.service.LikeService;
-import com.zyq.chirp.common.exception.ChirpException;
-import com.zyq.chirp.common.model.Code;
+import com.zyq.chirp.common.domain.exception.ChirpException;
+import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.common.util.CacheUtil;
 import com.zyq.chirp.common.util.PageUtil;
 import jakarta.annotation.Resource;
@@ -108,7 +108,8 @@ public class LikeServiceImpl implements LikeService {
     public List<Like> getLikeRecord(Long userId, Integer page) {
         int offset = PageUtil.getOffset(page, pageSize);
         return likeMapper.selectPage(new Page<>(offset, pageSize), new LambdaQueryWrapper<Like>()
-                        .eq(Like::getUserId, userId))
+                        .eq(Like::getUserId, userId)
+                        .orderByDesc(Like::getCreateTime))
                 .getRecords();
     }
 

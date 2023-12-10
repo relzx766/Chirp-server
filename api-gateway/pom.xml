@@ -43,6 +43,26 @@
     <dependencies>
         <dependency>
             <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-db</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-domian</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-util</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-redis</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
             <artifactId>user-client</artifactId>
             <version>1.0</version>
         </dependency>
@@ -54,11 +74,6 @@
         <dependency>
             <groupId>com.zyq.chirp</groupId>
             <artifactId>advice-client</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.zyq.chirp</groupId>
-            <artifactId>common</artifactId>
             <version>1.0</version>
         </dependency>
         <!-- 微服务相关依赖 -->

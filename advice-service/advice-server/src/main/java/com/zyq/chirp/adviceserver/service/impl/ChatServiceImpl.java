@@ -14,8 +14,8 @@ import com.zyq.chirp.adviceserver.domain.pojo.Chat;
 import com.zyq.chirp.adviceserver.mapper.ChatMapper;
 import com.zyq.chirp.adviceserver.service.ChatService;
 import com.zyq.chirp.adviceserver.util.ChatUtil;
-import com.zyq.chirp.common.exception.ChirpException;
-import com.zyq.chirp.common.model.Code;
+import com.zyq.chirp.common.domain.exception.ChirpException;
+import com.zyq.chirp.common.domain.model.Code;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -126,6 +126,20 @@ public class ChatServiceImpl implements ChatService {
             }
         });
         return result;
+    }
+
+    @Override
+    public List<ChatDto> getChatIndex(Long userId) {
+        Set<String> conversations = this.getConversationByUserId(userId);
+        List<Long> messageIds = this.getConvTop(conversations);
+        ArrayList<ChatDto> messages = new ArrayList<>();
+        this.getById(messageIds).forEach(chatDto -> {
+            messages.add(chatDto);
+            conversations.remove(chatDto.getConversationId());
+        });
+        Collection<List<ChatDto>> values = this.getChatByConversation(conversations, userId, 1).values();
+        values.forEach(messages::addAll);
+        return messages;
     }
 
 

@@ -21,8 +21,8 @@ import com.zyq.chirp.chirperserver.domain.pojo.Like;
 import com.zyq.chirp.chirperserver.mapper.ChirperMapper;
 import com.zyq.chirp.chirperserver.service.ChirperService;
 import com.zyq.chirp.chirperserver.service.LikeService;
-import com.zyq.chirp.common.exception.ChirpException;
-import com.zyq.chirp.common.model.Code;
+import com.zyq.chirp.common.domain.exception.ChirpException;
+import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.common.util.PageUtil;
 import com.zyq.chirp.mediaclient.client.MediaClient;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
@@ -294,8 +294,7 @@ public class ChirperServiceImpl implements ChirperService {
         }
         Map<Long, ChirperDto> chirperDtoMap = chirperMapper.selectList(new LambdaQueryWrapper<Chirper>()
                         .in(Chirper::getId, chirperIds)
-                        .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
-                        .orderByDesc(Chirper::getCreateTime))
+                        .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus()))
                 .stream()
                 .map(chirper -> chirperConvertor.pojoToDto(chirper))
                 .collect(Collectors.toMap(ChirperDto::getId, Function.identity(), (k1, k2) -> k1, LinkedHashMap::new));

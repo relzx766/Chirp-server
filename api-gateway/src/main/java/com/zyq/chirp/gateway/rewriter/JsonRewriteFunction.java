@@ -2,8 +2,8 @@ package com.zyq.chirp.gateway.rewriter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zyq.chirp.common.model.enumration.HttpHeader;
-import com.zyq.chirp.gateway.domain.Result;
+import com.zyq.chirp.common.domain.enums.HttpHeader;
+import com.zyq.chirp.common.domain.model.Result;
 import jakarta.annotation.Resource;
 import lombok.SneakyThrows;
 import org.reactivestreams.Publisher;
@@ -29,7 +29,7 @@ public class JsonRewriteFunction implements RewriteFunction<byte[], byte[]> {
         HttpStatusCode status = exchange.getResponse().getStatusCode();
         Optional<List<String>> message = Optional.ofNullable(exchange.getResponse().getHeaders().get(HttpHeader.MESSAGE.name()));
         Result result = new Result();
-        result.setCode(status);
+        result.setCode(status.value());
         message.ifPresent(m -> {
             byte[] msg = Base64.getDecoder().decode(m.get(0));
             result.setMessage(new String(msg, StandardCharsets.UTF_8));

@@ -42,14 +42,35 @@
     <dependencies>
         <dependency>
             <groupId>com.zyq.chirp</groupId>
-            <artifactId>feed-client</artifactId>
+            <artifactId>common-web</artifactId>
             <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>com.zyq.chirp</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>common-mq</artifactId>
             <version>1.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-util</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-domian</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-redis</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>feed-client</artifactId>
+            <version>1.0</version>
+        </dependency>
+
         <dependency>
             <groupId>com.zyq.chirp</groupId>
             <artifactId>chirper-client</artifactId>

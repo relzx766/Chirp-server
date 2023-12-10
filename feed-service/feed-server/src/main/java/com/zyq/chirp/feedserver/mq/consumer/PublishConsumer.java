@@ -1,6 +1,6 @@
 package com.zyq.chirp.feedserver.mq.consumer;
 
-import com.zyq.chirp.common.mq.Message;
+import com.zyq.chirp.common.mq.model.Message;
 import com.zyq.chirp.feedclient.dto.FeedDto;
 import com.zyq.chirp.feedserver.service.FeedService;
 import com.zyq.chirp.userclient.client.UserClient;

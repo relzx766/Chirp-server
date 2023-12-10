@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/chat")
@@ -23,12 +22,8 @@ public class ChatController {
 
     @GetMapping("/index")
     public ResponseEntity<List<ChatDto>> getIndexPage() {
-        long receiverId = StpUtil.getLoginIdAsLong();
-        Set<String> conversations = chatService.getConversationByUserId(receiverId);
-        List<Long> messageIds = chatService.getConvTop(conversations);
-        List<ChatDto> chatDtos = chatService.getById(messageIds);
-        assemble.assemble(chatDtos);
-        return ResponseEntity.ok(chatDtos);
+        List<ChatDto> messages = chatService.getChatIndex(StpUtil.getLoginIdAsLong());
+        return ResponseEntity.ok(assemble.assemble(messages));
     }
 
     @GetMapping("/history/page/{page}/{senderId}")

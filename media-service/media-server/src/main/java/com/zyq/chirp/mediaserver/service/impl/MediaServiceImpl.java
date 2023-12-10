@@ -1,9 +1,9 @@
 package com.zyq.chirp.mediaserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.zyq.chirp.common.exception.ChirpException;
-import com.zyq.chirp.common.exception.FileExistsException;
-import com.zyq.chirp.common.model.Code;
+import com.zyq.chirp.common.domain.exception.ChirpException;
+import com.zyq.chirp.common.domain.exception.FileExistsException;
+import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
 import com.zyq.chirp.mediaserver.convertor.MediaConvertor;
 import com.zyq.chirp.mediaserver.domain.pojo.Media;

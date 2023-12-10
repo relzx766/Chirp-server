@@ -4,8 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zyq.chirp.common.exception.ChirpException;
-import com.zyq.chirp.common.model.Code;
+import com.zyq.chirp.common.domain.exception.ChirpException;
+import com.zyq.chirp.common.domain.model.Code;
+import com.zyq.chirp.common.redis.util.BloomUtil;
 import com.zyq.chirp.userclient.dto.UserDto;
 import com.zyq.chirp.userserver.convertor.UserConvertor;
 import com.zyq.chirp.userserver.mapper.UserMapper;
@@ -15,6 +16,8 @@ import com.zyq.chirp.userserver.model.pojo.Relation;
 import com.zyq.chirp.userserver.model.pojo.User;
 import com.zyq.chirp.userserver.service.RelationService;
 import com.zyq.chirp.userserver.service.UserService;
+import io.lettuce.core.RedisCommandExecutionException;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,21 +41,8 @@ public class UserServiceImpl implements UserService {
     private RelationService relationService;
     @Value("${default-config.page-size}")
     private Integer pageSize;
-
-    @Override
-    public UserDto save(UserDto userDto) {
-        if (isExistByUsername(userDto.getUsername())) {
-            throw new ChirpException(Code.ERR_BUSINESS, "用户名已存在，请更换");
-        }
-        if (isExistByEmail(userDto.getEmail())) {
-            throw new ChirpException(Code.ERR_BUSINESS, "邮箱已存在，请更换");
-        }
-        User user = userConvertor.dtoToPojo(userDto);
-        user.setCreateTime(new Timestamp(System.currentTimeMillis()));
-        user.setStatus(AccountStatus.ACTIVE.getStatus());
-        userMapper.insert(user);
-        return userConvertor.pojoToDto(user);
-    }
+    private static final String USERNAME_BLOOM = "bloom:username";
+    private static final String EMAIL_BLOOM = "bloom:email";
 
     @Override
     public boolean update(UserDto userDto) {
@@ -201,21 +191,9 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ChirpException(Code.ERR_BUSINESS, "用户不存在"));
     }
 
-    @Override
-    public boolean isExistByUsername(String username) {
-        if (StringUtils.isBlank(username)) {
-            throw new ChirpException(Code.ERR_BUSINESS, "请输入用户名");
-        }
-        return Objects.nonNull(userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username)));
-    }
-
-    @Override
-    public boolean isExistByEmail(String email) {
-        if (StringUtils.isBlank(email)) {
-            throw new ChirpException(Code.ERR_BUSINESS, "请输入邮箱");
-        }
-        return Objects.nonNull(userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getEmail, email)));
-    }
+    @Resource
+    BloomUtil bloomUtil;
+    long INIT_CAPACITY = 100 * 100000000L;
 
     /**
      * 搜索用户，包含用户基本信息和与当前用户的关系
@@ -280,4 +258,74 @@ public class UserServiceImpl implements UserService {
                 .select(User::getId)
                 .in(User::getUsername, username)).stream().map(User::getId).toList();
     }
+
+    double ERR_RATE = 0.001;
+
+    @Override
+    public UserDto save(UserDto userDto) {
+        if (isExistByUsername(userDto.getUsername())) {
+            throw new ChirpException(Code.ERR_BUSINESS, "用户名已存在，请更换");
+        }
+        if (isExistByEmail(userDto.getEmail())) {
+            throw new ChirpException(Code.ERR_BUSINESS, "邮箱已存在，请更换");
+        }
+        User user = userConvertor.dtoToPojo(userDto);
+        user.setCreateTime(new Timestamp(System.currentTimeMillis()));
+        user.setStatus(AccountStatus.ACTIVE.getStatus());
+        userMapper.insert(user);
+        this.saveToUnBloom(user.getUsername());
+        this.saveToEmailBloom(user.getEmail());
+        return userConvertor.pojoToDto(user);
+    }
+
+    @Override
+    public boolean isExistByUsername(String username) {
+        if (StringUtils.isBlank(username)) {
+            throw new ChirpException(Code.ERR_BUSINESS, "请输入用户名");
+        }
+
+        return bloomUtil.exists(USERNAME_BLOOM, username);
+    }
+
+    @Override
+    public boolean isExistByEmail(String email) {
+        if (StringUtils.isBlank(email)) {
+            throw new ChirpException(Code.ERR_BUSINESS, "请输入邮箱");
+        }
+        return bloomUtil.exists(EMAIL_BLOOM, email);
+    }
+
+    @Override
+    @PostConstruct
+    public void createUsernameBloom() {
+        try {
+            bloomUtil.createFilter(USERNAME_BLOOM, INIT_CAPACITY, ERR_RATE);
+        } catch (RedisCommandExecutionException e) {
+            log.error("{}", e.getMessage());
+        }
+
+    }
+
+    @Override
+    public boolean saveToUnBloom(String username) {
+        return bloomUtil.add(USERNAME_BLOOM, username);
+    }
+
+    @Override
+    @PostConstruct
+    public void createEmailBloom() {
+        try {
+            bloomUtil.createFilter(EMAIL_BLOOM, INIT_CAPACITY, ERR_RATE);
+        } catch (RedisCommandExecutionException e) {
+            log.error("{}", e.getMessage());
+        }
+
+    }
+
+    @Override
+    public boolean saveToEmailBloom(String email) {
+        return bloomUtil.add(EMAIL_BLOOM, email);
+    }
+
+
 }

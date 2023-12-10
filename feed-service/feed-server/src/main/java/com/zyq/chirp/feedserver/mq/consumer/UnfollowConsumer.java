@@ -1,7 +1,7 @@
 package com.zyq.chirp.feedserver.mq.consumer;
 
 import com.zyq.chirp.chirpclient.client.ChirperClient;
-import com.zyq.chirp.common.mq.Message;
+import com.zyq.chirp.common.mq.model.Message;
 import com.zyq.chirp.feedserver.service.FeedService;
 import com.zyq.chirp.userclient.dto.RelationDto;
 import jakarta.annotation.Resource;

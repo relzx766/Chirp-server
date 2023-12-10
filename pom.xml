@@ -15,17 +15,14 @@
     <name>chirp</name>
     <description>chirp</description>
     <modules>
-        <module>common</module>
         <module>user-service</module>
         <module>auth-service</module>
-        <module>auth-service/auth-client</module>
-        <module>auth-service/auth-server</module>
         <module>chirper-service</module>
         <module>advice-service</module>
         <module>api-gateway</module>
         <module>media-service</module>
-        <module>media-service/media-server</module>
         <module>feed-service</module>
+        <module>chirp-common</module>
     </modules>
     <properties>
         <java.version>17</java.version>

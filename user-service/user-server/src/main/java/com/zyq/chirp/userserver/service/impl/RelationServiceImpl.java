@@ -6,10 +6,9 @@ import com.zyq.chirp.adviceclient.dto.NotificationDto;
 import com.zyq.chirp.adviceclient.enums.EntityType;
 import com.zyq.chirp.adviceclient.enums.EventType;
 import com.zyq.chirp.adviceclient.enums.NoticeType;
-import com.zyq.chirp.common.exception.ChirpException;
-import com.zyq.chirp.common.model.Code;
-import com.zyq.chirp.common.mq.DefaultKafkaProducer;
-import com.zyq.chirp.common.mq.Message;
+import com.zyq.chirp.common.domain.exception.ChirpException;
+import com.zyq.chirp.common.domain.model.Code;
+import com.zyq.chirp.common.mq.model.Message;
 import com.zyq.chirp.userclient.dto.RelationDto;
 import com.zyq.chirp.userserver.convertor.RelationConvertor;
 import com.zyq.chirp.userserver.mapper.RelationMapper;
@@ -38,8 +37,6 @@ public class RelationServiceImpl implements RelationService {
     RelationMapper relationMapper;
     @Resource
     RelationConvertor relationConvertor;
-    @Resource
-    DefaultKafkaProducer<Object> producer;
     @Value("${mq.topic.site-message.follow}")
     String follow;
     @Value("${mq.topic.unfollow}")

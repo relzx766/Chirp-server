@@ -33,6 +33,36 @@
     <dependencies>
         <dependency>
             <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-mq</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-util</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-domian</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-db</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-web</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>common-redis</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
             <artifactId>auth-client</artifactId>
             <version>1.0</version>
 
@@ -53,12 +83,6 @@
         <dependency>
             <groupId>com.zyq.chirp</groupId>
             <artifactId>user-client</artifactId>
-            <version>1.0</version>
-
-        </dependency>
-        <dependency>
-            <groupId>com.zyq.chirp</groupId>
-            <artifactId>common</artifactId>
             <version>1.0</version>
 
         </dependency>

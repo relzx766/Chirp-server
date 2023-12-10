@@ -32,4 +32,14 @@ public interface UserService {
     List<UserDto> getBasicInfo(Collection<Long> userIds);
 
     List<Long> getIdByUsername(Collection<String> username);
+
+    void createUsernameBloom();
+
+    boolean saveToUnBloom(String username);
+
+    void createEmailBloom();
+
+    boolean saveToEmailBloom(String email);
+
+
 }

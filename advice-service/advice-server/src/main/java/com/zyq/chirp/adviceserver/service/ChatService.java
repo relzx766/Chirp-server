@@ -26,6 +26,8 @@ public interface ChatService {
      */
     List<Long> getConvTop(Collection<String> conversations);
 
+    List<ChatDto> getChatIndex(Long userId);
+
     void deleteById(Long messageId);
 
     void markAsDel(Long messageId, Long userId);

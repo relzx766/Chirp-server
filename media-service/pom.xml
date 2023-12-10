@@ -13,6 +13,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>media-client</module>
+        <module>media-server</module>
     </modules>
 
     <properties>

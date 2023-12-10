@@ -25,7 +25,7 @@ public class UserDto implements Serializable {
     @Length(min = 4, max = 30, message = "用户名长度应该为4-30")
     @Pattern(regexp = "[a-zA-Z0-9]+", message = "用户名只能包含字母和数字")
     private String username;
-    @Length(min = 8, message = "密码不能小于8位")
+    @Length(min = 6, max = 30, message = "密码长度为6-30")
     private String password;
     @Length(min = 1, max = 40, message = "昵称长度应为1-40")
     private String nickname;
