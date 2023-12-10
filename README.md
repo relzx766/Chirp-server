@@ -225,7 +225,7 @@ cluster-announce-bus-port 16384
 docker network create redis-cluster
 ```
 
-cd到/cluster，运行命令
+cd到/cluster/redis，运行命令
 
 ```shell
 docker-compose up -d
