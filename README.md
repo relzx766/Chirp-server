@@ -234,4 +234,14 @@ docker-compose up -d
 目录结构如下<br>
 ![](./docs/redis-cluster-1.png)
 ![](./docs/redis-cluster-2.png)
+进入任意一个实例，如：
+```shell
+docker exec -it redis-node-1 /bin/bash
+```
+# 组建集群,192.168.233.111为当前物理机的ip地址
+```shell
+redis-cli --cluster create 192.168.233.111:6379 192.168.233.111:6380 192.168.233.111:6381 192.168.233.111:6382 192.168.233.111:6383 192.168.233.111:6384 --cluster-replicas 1
+```
+![](https://gitee.com/niceyoo/blog/raw/master/img/image-20201210223827327.png)
+参考:[https://www.cnblogs.com/niceyoo/p/14118146.html](https://www.cnblogs.com/niceyoo/p/14118146.html)<br>
 完成<br>
