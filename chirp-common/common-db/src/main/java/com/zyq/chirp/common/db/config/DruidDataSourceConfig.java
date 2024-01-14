@@ -18,4 +18,40 @@ public class DruidDataSourceConfig {
         return new DruidDataSourceWrapper();
 
     }
+  /*  @Bean
+    @ConfigurationProperties("spring.datasource.master")
+    public DruidDataSource masterDataSource(){
+       return DruidDataSourceBuilder.create().build();
+    }
+    @Resource
+    SlavesProperties slavesProperties;
+    @Bean
+    public List<DruidDataSource>slaveDataSource(){
+      return   slavesProperties.getDataSources().stream()
+                .map(properties -> {
+                    DruidDataSource dataSource = new DruidDataSource();
+                    dataSource.setUrl(properties.getUrl());
+                    dataSource.setDriverClassName(properties.getDriverClassName());
+                    dataSource.setUsername(properties.getUsername());
+                    dataSource.setPassword(properties.getPassword());
+                    //添加到db context
+                    DBContext.addSlave();
+                    return dataSource;
+                }).toList();
+    }
+    @Bean
+    @Primary
+    public DataSource myRoutingDataSource(){
+        HashMap<Object, Object> dataSourceMap = new HashMap<>();
+        DruidDataSource masterDataSource = masterDataSource();
+        dataSourceMap.put(DBContext.MASTER, masterDataSource);
+        List<DruidDataSource> druidDataSources = slaveDataSource();
+        for (int i = 0; i < druidDataSources.size(); i++) {
+            dataSourceMap.put(DBContext.getSlave(i),druidDataSources.get(i));
+        }
+        RoutingDataSource routingDataSource = new RoutingDataSource();
+        routingDataSource.setDefaultTargetDataSource(masterDataSource);
+        routingDataSource.setTargetDataSources(dataSourceMap);
+        return routingDataSource;
+    }*/
 }

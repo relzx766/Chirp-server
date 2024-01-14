@@ -17,6 +17,7 @@ public class ChatController {
     @Resource
     ChatService chatService;
 
+
     @Resource
     MessageAssembleStrategy<ChatDto> assemble;
 

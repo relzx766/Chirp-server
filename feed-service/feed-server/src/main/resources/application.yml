@@ -3,7 +3,7 @@ spring:
     name: feed-server
   cloud:
     nacos:
-      server-addr: 192.168.145.1:8848
+      server-addr: 192.168.169.129:8846,192.168.169.129:8847,192.168.169.129:8848
   config:
     import:
       - optional:nacos:feedServer-dev.yml
@@ -13,12 +13,12 @@ spring:
     redis:
       cluster:
         nodes:
-          - 192.168.233.111:6379
-          - 192.168.233.111:6380
-          - 192.168.233.111:6381
-          - 192.168.233.111:6382
-          - 192.168.233.111:6383
-          - 192.168.233.111:6384
+          - 192.168.169.129:6379
+          - 192.168.169.129:6380
+          - 192.168.169.129:6381
+          - 192.168.169.129:6382
+          - 192.168.169.129:6383
+          - 192.168.169.129:6384
         max-redirects: 3
       password: 1234
       timeout: 6000ms
@@ -29,7 +29,7 @@ spring:
           min-idle: 0
           max-wait: -1
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: 192.168.169.129:19092
     consumer:
       group-id: feed_consumer_group
       auto-offset-reset: earliest
@@ -37,7 +37,7 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: com.zyq.chirp.chirpclient.dto,com.zyq.chirp.common.model,com.zyq.chirp.feedclient.dto,com.zyq.chirp.userclient.dto,com.zyq.chirp.common.mq
+        spring.json.trusted.packages: com.zyq.chirp.chirpclient.dto,com.zyq.chirp.common.domain.model,com.zyq.chirp.feedclient.dto,com.zyq.chirp.userclient.dto,com.zyq.chirp.common.mq.*
     producer:
       # 发生错误后，消息重发的次数。
       retries: 0

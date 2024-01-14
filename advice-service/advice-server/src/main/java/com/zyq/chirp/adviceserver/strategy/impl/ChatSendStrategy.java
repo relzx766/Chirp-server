@@ -20,7 +20,7 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class ChatSendSendStrategy implements MessageSendStrategy<ChatDto> {
+public class ChatSendStrategy implements MessageSendStrategy<ChatDto> {
     @Resource
     ObjectMapper objectMapper;
     @Resource

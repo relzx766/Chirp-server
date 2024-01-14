@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -59,10 +60,39 @@ public class RelationServiceImpl implements RelationService {
     }
 
     @Override
-    public List<Relation> getUserRelation(Collection<Long> userIds, Long targetUserId) {
-        return relationMapper.selectList(new LambdaQueryWrapper<Relation>()
-                .eq(Relation::getFromId, targetUserId)
-                .in(Relation::getToId, userIds));
+    public List<RelationDto> getUserRelation(Collection<Long> userIds, Long targetUserId) {
+        ArrayList<Long> noRecordUser = new ArrayList<>(userIds);
+        List<RelationDto> records = new ArrayList<>(relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                        .eq(Relation::getFromId, targetUserId)
+                        .in(Relation::getToId, userIds))
+                .stream()
+                .map(r -> {
+                    noRecordUser.remove(r.getToId());
+                    return relationConvertor.pojoToDto(r);
+                })
+                .toList());
+        noRecordUser.forEach(id -> {
+            records.add(RelationDto.unFollow(id, targetUserId));
+        });
+        return records;
+    }
+
+    @Override
+    public List<RelationDto> getUserRelationOfUser(Collection<Long> userIds, Long targetUserId) {
+        ArrayList<Long> noRecordUser = new ArrayList<>(userIds);
+        List<RelationDto> records = new ArrayList<>(relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                        .eq(Relation::getToId, targetUserId)
+                        .in(Relation::getFromId, userIds))
+                .stream()
+                .map(r -> {
+                    noRecordUser.remove(r.getFromId());
+                    return relationConvertor.pojoToDto(r);
+                })
+                .toList());
+        noRecordUser.forEach(id -> {
+            records.add(RelationDto.unFollow(id, targetUserId));
+        });
+        return records;
     }
 
     @Override
@@ -75,6 +105,16 @@ public class RelationServiceImpl implements RelationService {
                 .getRecords()
                 .stream()
                 .map(Relation::getFromId)
+                .toList();
+    }
+
+    @Override
+    public List<Long> getFollowing(Long userId) {
+        return relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                        .select(Relation::getToId)
+                        .eq(Relation::getFromId, userId))
+                .stream()
+                .map(Relation::getToId)
                 .toList();
     }
 

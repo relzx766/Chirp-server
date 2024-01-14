@@ -10,12 +10,12 @@ public interface E2EEService {
      *
      * @return
      */
-    public String[] generateKeyPair();
+    String[] generateKeyPair();
 
-    public String savePublicKey(Long userId, String publicKey);
+    String savePublicKey(Long userId, String publicKey);
 
-    public String getPublicKey(Long userId);
+    String getPublicKey(Long userId);
 
-    public Map<Long, String> getPublicKey(List<Long> ids);
+    Map<Long, String> getPublicKey(List<Long> ids);
 
 }

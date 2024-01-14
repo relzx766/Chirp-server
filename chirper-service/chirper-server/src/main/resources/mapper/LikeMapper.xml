@@ -10,18 +10,22 @@
             select #{item.chirperId} as c_id,#{item.userId} as u_id,#{item.createTime} as c_time
         </foreach>
         )as temp1
-        join tb_chirper tc on tc.id=temp1.c_id join tb_user tu on tu.id=temp1.u_id
+        join tb_chirper tc on tc.id=temp1.c_id
     </insert>
 
     <delete id="deleteList">
-        delete
-        from tb_chirper_like
-        where (chirper_id, user_id) in
-        (
-        <foreach collection="list" item="item" separator=",">
-            (#{item.chirperId}, #{item.userId})
-        </foreach>
-        )
+        delete tcl
+        from tb_chirper_like tcl
+        join
+        (<foreach collection="list" item="item" separator=",">
+        select #{item.chirperId} as chirper_id,
+        #{item.userId} as user_id,
+        #{item.createTime} as create_time
+    </foreach>)temp
+        on tcl.chirper_id=temp.chirper_id
+        and tcl.user_id=temp.user_id
+        where temp.create_time>tcl.create_time
+
     </delete>
 
     <update id="updateChirperLikeCount">

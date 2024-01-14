@@ -23,4 +23,5 @@ public class SiteMessage {
     protected Long receiverId;
     protected String receiverName;
     protected String receiverAvatar;
+    protected String failedMsg;
 }

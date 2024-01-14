@@ -1,5 +1,6 @@
 package com.zyq.chirp.userclient.client;
 
+import com.zyq.chirp.userclient.dto.RelationDto;
 import com.zyq.chirp.userclient.dto.UserDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @FeignClient("user-server")
 public interface UserClient {
@@ -36,4 +38,10 @@ public interface UserClient {
 
     @GetMapping("/rela/count/{id}")
     ResponseEntity<Long> getFollowerCount(@PathVariable("id") Long userId);
+
+    @GetMapping("/rela/following/id/{userId}")
+    ResponseEntity<List<Long>> getFollowingIds(@PathVariable("userId") Long userId);
+
+    @PostMapping("/rela/people/{id}")
+    ResponseEntity<List<RelationDto>> getRelationById(@RequestParam("users") Set<Long> userId, @PathVariable("id") Long id);
 }

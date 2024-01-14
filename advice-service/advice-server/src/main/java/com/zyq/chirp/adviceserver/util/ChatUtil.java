@@ -16,4 +16,15 @@ public class ChatUtil {
     public static String[] splitConversation(String conversation) {
         return conversation.split(SEPARATOR);
     }
+
+    /**
+     * 判断话题参与者是否都为自己
+     *
+     * @param conversation 话题
+     * @return 话题参与者是否都为自己
+     */
+    public static boolean isSelfTaking(String conversation) {
+        String[] member = splitConversation(conversation);
+        return member[0].equals(member[1]);
+    }
 }

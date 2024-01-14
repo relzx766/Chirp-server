@@ -19,7 +19,8 @@
     </insert>
 
     <update id="updateStatusBatch">
-        update tb_private_message tpm join
+        update
+        tb_private_message tpm join
         (<foreach collection="chats" item="chat" separator="union all">
         select #{chat.id} as id
     </foreach>) temp

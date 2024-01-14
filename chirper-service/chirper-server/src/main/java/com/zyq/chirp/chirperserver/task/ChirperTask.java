@@ -1,4 +1,3 @@
-/*
 
 package com.zyq.chirp.chirperserver.task;
 
@@ -12,7 +11,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
 
@@ -43,26 +41,5 @@ public class ChirperTask {
                 });
         log.info("----end 持久化浏览量");
     }
-
-    @Async
-    @Scheduled(fixedDelay = 5000)
-    @Transactional
-    public void saveForwardCountTask() {
-        log.info("持久化转发量 start----");
-        BoundHashOperations<String, String, Integer> operations = redisTemplate.boundHashOps(CacheKey.FORWARD_COUNT_BOUND_KEY.getKey());
-        Objects.requireNonNull(operations.keys())
-                .stream()
-                .limit(saveLimit)
-                .forEach(key -> {
-                    Integer count = operations.get(key);
-                    int flag = chirperService.updateForward(Long.valueOf(key), count);
-                    if (flag > 0) {
-                        operations.delete(key);
-                    }
-                });
-        log.info("----end 持久化转发量");
-    }
-
 }
 
-*/

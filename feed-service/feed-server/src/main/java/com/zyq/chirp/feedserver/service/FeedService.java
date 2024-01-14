@@ -5,6 +5,12 @@ import com.zyq.chirp.feedclient.dto.FeedDto;
 import java.util.Collection;
 
 public interface FeedService {
+    /**
+     * 初始化一个feed流
+     *
+     * @param targetId 目标用户id
+     */
+    void initFeed(String targetId);
     void addOne(FeedDto feedDto);
 
     void addFeedBatch(Collection<FeedDto> feedDtos);
@@ -20,6 +26,8 @@ public interface FeedService {
     void removeBatch(Collection<FeedDto> feedDtos);
 
     Collection<FeedDto> getPage(String receiverId, Integer page);
+
+    Collection<FeedDto> getPageByScore(String receiverId, Double score);
 
     Collection<FeedDto> getRange(String receiverId, Double start, Double end);
 }

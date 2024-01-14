@@ -16,30 +16,29 @@ public class AuthServiceImpl implements AuthService {
     @Resource
     RedisTemplate<String, Object> redisTemplate;
     String ONLINE_CACHE = "online";
-
+    private static final Long DELTA = 1L;
     @Override
     public boolean online(String id) {
-        BoundHashOperations<String, String, Boolean> operations = redisTemplate.boundHashOps(CacheKey.BOUND_ONLINE_INFO.getKey());
-        operations.put(id, Boolean.TRUE);
+        BoundHashOperations<String, String, Integer> operations = redisTemplate.boundHashOps(CacheKey.BOUND_ONLINE_INFO.getKey());
+        operations.increment(id, DELTA);
         return true;
     }
 
     @Override
     public boolean getIsOnline(String id) {
-        BoundHashOperations<String, String, Boolean> operations = redisTemplate.boundHashOps(CacheKey.BOUND_ONLINE_INFO.getKey());
-        Boolean isOnline = operations.get(id);
-        return isOnline != null ? isOnline : Boolean.FALSE;
+        BoundHashOperations<String, String, Integer> operations = redisTemplate.boundHashOps(CacheKey.BOUND_ONLINE_INFO.getKey());
+        Integer connectCount = operations.get(id);
+        return connectCount != null && connectCount > 0;
     }
 
 
     @Override
     public Map<String, Boolean> getIsOnline(Collection<String> ids) {
-        BoundHashOperations<String, String, Boolean> operations = redisTemplate.boundHashOps(CacheKey.BOUND_ONLINE_INFO.getKey());
         if (ids != null && !ids.isEmpty()) {
             return ids.stream()
                     .map(id -> {
-                        Boolean isOnline = operations.get(id);
-                        return Map.entry(id, isOnline != null ? isOnline : Boolean.FALSE);
+                        Boolean isOnline = this.getIsOnline(id);
+                        return Map.entry(id, isOnline);
                     }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         }
         return Map.of();
@@ -47,8 +46,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public boolean offline(String id) {
-        BoundHashOperations<String, String, Boolean> operations = redisTemplate.boundHashOps(CacheKey.BOUND_ONLINE_INFO.getKey());
-        operations.put(id, Boolean.FALSE);
+        BoundHashOperations<String, String, Integer> operations = redisTemplate.boundHashOps(CacheKey.BOUND_ONLINE_INFO.getKey());
+        operations.increment(id, -DELTA);
         return true;
     }
 }

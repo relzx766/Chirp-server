@@ -17,5 +17,9 @@ public enum ChatStatusEnum {
     /**
      * 发送中
      */
-    SENDING;
+    SENDING,
+    /**
+     * 发送失败
+     */
+    FAILED;
 }

@@ -3,6 +3,7 @@ package com.zyq.chirp.chirperserver.service;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperStatus;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
+import com.zyq.chirp.common.mq.model.Action;
 
 import java.util.Collection;
 import java.util.List;
@@ -12,6 +13,8 @@ public interface ChirperService {
     ChirperDto save(ChirperDto chirperDto);
 
     ChirperDto reply(ChirperDto chirperDto);
+
+    void modifyReplyCount(List<Action<Long, Long>> actions);
 
     /**
      * 获取被引用的推文
@@ -32,21 +35,26 @@ public interface ChirperService {
     List<ChirperDto> getInteractionInfo(List<ChirperDto> chirperDtos, Long userId);
 
     void forward(Long chirperId, Long userId);
+    /*    void saveForward(List<Action<Long,Long>>actions);*/
 
     /**
      * @param chirperId 被转发的推文id
      * @param userId    转发者
      */
-    void cancelForward(Long chirperId, Long userId);
+    boolean cancelForward(Long chirperId, Long userId);
 
+    /*   void saveForwardCancel(List<Action<Long,Long>>actions);*/
+    void modifyForwardCount(List<Action<Long, Long>> actions);
 
     ChirperDto quote(ChirperDto chirperDto);
+
+    void modifyQuoteCount(List<Action<Long, Long>> actions);
 
 
     void delete(Long chirperId, Long currentUserId);
 
 
-    List<ChirperDto> getById(Collection<Long> chirperIds);
+    List<ChirperDto> getById(List<Long> chirperIds);
 
     List<ChirperDto> getPage(Integer page, Long chirperId, Collection<Long> userIds, ChirperType type, Boolean isMedia);
 
@@ -95,4 +103,6 @@ public interface ChirperService {
     Map<Long, List<Long>> getAllIdByAuthors(Collection<Long> userIds);
 
     Long getAuthorIdByChirperId(Long chirperId);
+
+    List<ChirperDto> getByFollowerId(Long userId, Integer size);
 }

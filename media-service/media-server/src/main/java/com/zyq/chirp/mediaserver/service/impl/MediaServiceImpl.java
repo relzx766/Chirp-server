@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 @Service
 @CacheConfig(cacheNames = "upload:finish:hash")
 public class MediaServiceImpl implements MediaService {
-    private static final String BASE_DIR = "D:\\project\\nginx\\html\\media\\";
+    private static final String BASE_DIR = "D:\\Project\\static\\media\\";
     @Resource
     MediaMapper mediaMapper;
     @Resource

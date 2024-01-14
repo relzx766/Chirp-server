@@ -45,7 +45,11 @@
             <artifactId>commons-codec</artifactId>
             <version>1.16.0</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+        </dependency>
     </dependencies>
     <!--    &lt;!&ndash; spring cloud 依赖管理 &ndash;&gt;
         <dependencyManagement>

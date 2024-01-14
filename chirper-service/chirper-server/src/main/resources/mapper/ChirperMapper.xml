@@ -308,4 +308,49 @@ type=@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE">
             join tb_chirper tc on tc.id=temp.reference_id
         </if>
     </insert>
+
+    <!--    <insert id="addForwardBatch">
+            insert into tb_chirper(id, author_id, create_time,  type, referenced_chirper_id, status)
+            select temp.* from
+             (<foreach collection="chirpers" item="item"  separator="union">
+            select
+            #{item.id} as id,
+            #{item.authorId} as author_id,
+            #{item.createTime} as create_time,
+            #{item.type} as type,
+            #{item.referencedChirperId} as refer_id,
+            #{item.status} as status
+        </foreach>)temp
+            join tb_chirper tc on tc.id=temp.refer_id
+         on duplicate key update
+            status=values(status),
+            create_time=values(create_time)
+        </insert>-->
+
+    <insert id="addQuote">
+        insert into tb_chirper(id, author_id, conversation_id, create_time, text, type, referenced_chirper_id,
+                               media_keys, view_count, reply_count, like_count, quote_count, forward_count, status)
+        select #{id},
+               #{authorId},
+               #{conversationId},
+               #{createTime},
+               #{text},
+               #{type},
+               #{referencedChirperId},
+               #{mediaKeys},
+               #{viewCount},
+               #{replyCount},
+               #{likeCount},
+               #{quoteCount},
+               #{forwardCount},
+               #{status}
+        where exists(select id from tb_chirper where id = #{referencedChirperId})
+    </insert>
+
+    <insert id="addForward">
+        insert into tb_chirper(id, author_id, create_time, type, referenced_chirper_id, status)
+        values (#{id}, #{authorId}, #{createTime}, #{type}, #{referencedChirperId}, #{status})
+        on duplicate key update status      =values(status),
+                                create_time = values(create_time)
+    </insert>
 </mapper>

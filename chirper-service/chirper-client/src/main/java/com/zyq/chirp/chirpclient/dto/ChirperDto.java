@@ -33,7 +33,7 @@ public class ChirperDto {
     private Long inReplyToChirperId;
 
     private Timestamp createTime;
-    @Length(max = 500, message = "最大字数为500")
+    @Length(max = 1000, message = "最大字数为1000")
     private String text;
     private String type;
     @NotNull(groups = Quote.class, message = "引用对象不能为空")

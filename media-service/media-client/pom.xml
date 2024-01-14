@@ -33,10 +33,5 @@
             <artifactId>feign-httpclient</artifactId>
             <version>12.3</version>
         </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
     </dependencies>
 </project>

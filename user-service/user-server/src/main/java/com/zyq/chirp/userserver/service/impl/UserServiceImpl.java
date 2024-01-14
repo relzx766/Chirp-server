@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zyq.chirp.common.domain.exception.ChirpException;
 import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.common.redis.util.BloomUtil;
+import com.zyq.chirp.userclient.dto.RelationDto;
 import com.zyq.chirp.userclient.dto.UserDto;
 import com.zyq.chirp.userserver.convertor.UserConvertor;
 import com.zyq.chirp.userserver.mapper.UserMapper;
@@ -102,7 +103,7 @@ public class UserServiceImpl implements UserService {
             Map<Long, Integer> relation = new HashMap<>();
             if (currentUserId != null) {
                 relation.putAll(relationService.getUserRelation(userIds, currentUserId).stream()
-                        .collect(Collectors.toMap(Relation::getToId, Relation::getStatus)));
+                        .collect(Collectors.toMap(RelationDto::getToId, RelationDto::getStatus)));
             }
             return userMapper.selectList(new LambdaQueryWrapper<User>()
                             .in(User::getId, userIds)
@@ -225,7 +226,7 @@ public class UserServiceImpl implements UserService {
             List<Long> userIds = userDtos.stream().map(UserDto::getId).toList();
             Map<Long, Integer> relationMap = relationService.getUserRelation(userIds, currentUserId)
                     .stream()
-                    .collect(Collectors.toMap(Relation::getToId, Relation::getStatus));
+                    .collect(Collectors.toMap(RelationDto::getToId, RelationDto::getStatus));
             userDtos.forEach(userDto -> {
                 Integer type = relationMap.get(userDto.getId());
                 type = type != null ? type : RelationType.UNFOLLOWED.getRelation();
@@ -270,6 +271,7 @@ public class UserServiceImpl implements UserService {
             throw new ChirpException(Code.ERR_BUSINESS, "邮箱已存在，请更换");
         }
         User user = userConvertor.dtoToPojo(userDto);
+        user.setNickname(user.getUsername());
         user.setCreateTime(new Timestamp(System.currentTimeMillis()));
         user.setStatus(AccountStatus.ACTIVE.getStatus());
         userMapper.insert(user);

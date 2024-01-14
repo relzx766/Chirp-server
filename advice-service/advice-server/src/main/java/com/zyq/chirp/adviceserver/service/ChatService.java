@@ -1,6 +1,7 @@
 package com.zyq.chirp.adviceserver.service;
 
 import com.zyq.chirp.adviceclient.dto.ChatDto;
+import jakarta.websocket.Session;
 
 import java.util.Collection;
 import java.util.List;
@@ -10,7 +11,13 @@ import java.util.Set;
 public interface ChatService {
     void send(ChatDto chatDto);
 
+    Boolean canSendChat(Long sender, Long receiver);
+
     void add(ChatDto chatDto);
+
+    void connect(Long userId, Session session);
+
+    void disconnect(Long userId, Session session);
 
     void addBatch(Collection<ChatDto> chatDtos);
 

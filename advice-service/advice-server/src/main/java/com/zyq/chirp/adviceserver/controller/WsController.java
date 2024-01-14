@@ -4,11 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.ChatDto;
 import com.zyq.chirp.adviceclient.enums.MessageTypeEnum;
-import com.zyq.chirp.adviceserver.domain.enums.CacheKey;
-import com.zyq.chirp.adviceserver.domain.enums.ChatStatusEnum;
 import com.zyq.chirp.adviceserver.domain.enums.WsActionEnum;
 import com.zyq.chirp.adviceserver.mq.dispatcher.MessageDispatcher;
-import com.zyq.chirp.adviceserver.mq.listener.RedisSubscribeListener;
 import com.zyq.chirp.adviceserver.service.ChatService;
 import com.zyq.chirp.common.domain.exception.ChirpException;
 import com.zyq.chirp.common.domain.model.Code;
@@ -17,13 +14,7 @@ import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.BoundHashOperations;
-import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.data.redis.listener.ChannelTopic;
-import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -38,23 +29,16 @@ import java.util.concurrent.CopyOnWriteArraySet;
 public class WsController {
 
     static KafkaTemplate<String, Object> kafkaTemplate;
-    static String connectTopic;
-    static String disconnectTopic;
-    static String messageTopic;
     static MessageDispatcher messageDispatcher;
     static RedisTemplate<String, Object> redisTemplate;
     static ObjectMapper objectMapper;
     static ChatService chatService;
-    static RedisMessageListenerContainer redisMessageListenerContainer;
+
     private static ConcurrentHashMap<Long, Session> sessionPool = new ConcurrentHashMap<>();
     private static CopyOnWriteArraySet<WsController> webSocketSet = new CopyOnWriteArraySet<>();
     String socketId;
-    RedisSubscribeListener subscribeListener;
 
-    @Autowired
-    public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
-        WsController.redisMessageListenerContainer = redisMessageListenerContainer;
-    }
+
 
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
@@ -71,23 +55,7 @@ public class WsController {
         WsController.chatService = chatService;
     }
 
-    @Value("${mq.topic.socket-connect}")
 
-    public void setConnectTopic(String connectTopic) {
-        WsController.connectTopic = connectTopic;
-    }
-
-    @Value("${mq.topic.socket-disconnect}")
-
-    public void setDisconnectTopic(String disconnectTopic) {
-        WsController.disconnectTopic = disconnectTopic;
-    }
-
-    @Value("${mq.topic.site-message.user}")
-
-    public void setMessageTopic(String messageTopic) {
-        WsController.messageTopic = messageTopic;
-    }
 
     @Autowired
     public void setNoticeDispatcher(MessageDispatcher messageDispatcher) {
@@ -105,10 +73,7 @@ public class WsController {
         socketId = session.getId();
         webSocketSet.add(this);
         sessionPool.put(userId, session);
-        redisTemplate.opsForHash().put(CacheKey.BOUND_CONNECT_INFO.getKey(), STR. "\{ userId }:\{ socketId }" , socketId);
-        kafkaTemplate.send(connectTopic, userId);
-        subscribeListener = new RedisSubscribeListener(session);
-        redisMessageListenerContainer.addMessageListener(subscribeListener, new ChannelTopic(messageTopic + userId));
+        chatService.connect(userId, session);
     }
 
     @OnMessage
@@ -121,7 +86,6 @@ public class WsController {
                 ChatDto chatDto = objectMapper.readValue(message, ChatDto.class);
                 chatDto.setSenderId(userId);
                 chatService.send(chatDto);
-                chatDto.setStatus(ChatStatusEnum.UNREAD.name());
                 session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnum.CHAT.name(), List.of(chatDto))));
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
@@ -132,21 +96,16 @@ public class WsController {
     }
 
     @OnClose
-    public void onClose(@PathParam("userId") Long userId) {
+    public void onClose(Session session, @PathParam("userId") Long userId) {
         log.info("WebSocket断开连接,用户ID：{}", userId);
         webSocketSet.remove(this);
-        BoundHashOperations<String, Object, Object> operations = redisTemplate.boundHashOps(CacheKey.BOUND_CONNECT_INFO.getKey());
-        operations.delete(STR. "\{ userId }:\{ socketId }" );
-        try (Cursor<Map.Entry<Object, Object>> cursor = operations.scan(ScanOptions.scanOptions().match(STR. "\{ userId }*" ).build())) {
-            if (!cursor.hasNext()) {
-                kafkaTemplate.send(disconnectTopic, userId);
-            }
-        }
+
+
     }
 
     @OnError
     public void onError(Session session, @PathParam("userId") Long userId, Throwable error) {
-        log.error("{}", error);
+        log.error("", error);
     }
 
 }

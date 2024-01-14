@@ -23,6 +23,10 @@ public class FeedController {
         return ResponseEntity.ok(feedService.getPage(StpUtil.getLoginIdAsString(), page));
     }
 
+    @GetMapping("/score/{score}")
+    public ResponseEntity<Collection<FeedDto>> getPageByScore(@PathVariable("score") Double score) {
+        return ResponseEntity.ok(feedService.getPageByScore(StpUtil.getLoginIdAsString(), score));
+    }
     @GetMapping("/{start}/{end}")
     public ResponseEntity<Collection<FeedDto>> getRange(@PathVariable("start") Double start,
                                                         @PathVariable("end") Double end) {

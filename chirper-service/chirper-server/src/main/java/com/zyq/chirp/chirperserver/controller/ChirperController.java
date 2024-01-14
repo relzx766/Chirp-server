@@ -75,13 +75,13 @@ public class ChirperController {
     }
 
     //@ApiOperation(value = "删除推文",notes = "用户仅能删除其自己的推文")
-    @DeleteMapping("/delete")
+/*    @DeleteMapping("/delete")
     public ResponseEntity del(
             //   @ApiParam(value = "推文id",required = true,example = "123")
             @RequestParam("chirperId") Long chirperId) {
         chirperService.delete(chirperId, StpUtil.getLoginIdAsLong());
         return ResponseEntity.ok(null);
-    }
+    }*/
 
     //@ApiOperation(value = "推文详情")
     @GetMapping("/detail/{id}")
@@ -118,7 +118,7 @@ public class ChirperController {
     @PostMapping("/search")
     public ResponseEntity<List<ChirperDto>> search(@RequestParam("keyword") String keyword,
                                                    @RequestParam("page") Integer page,
-                                                   @RequestParam("isMedia") Boolean isMedia) {
+                                                   @RequestParam(value = "isMedia", defaultValue = "false") Boolean isMedia) {
 
         List<ChirperDto> chirperDtos = chirperService.search(keyword, page, isMedia);
         if (StpUtil.isLogin()) {
@@ -181,5 +181,10 @@ public class ChirperController {
     @PostMapping("/id/author")
     public ResponseEntity<Map<Long, List<Long>>> getIdByAuthor(@RequestParam("userIds") Collection<Long> userIds) {
         return ResponseEntity.ok(chirperService.getAllIdByAuthors(userIds));
+    }
+
+    @GetMapping("/following/{id}/{size}")
+    public ResponseEntity<List<ChirperDto>> getByFollowerId(@PathVariable("id") Long userId, @PathVariable("size") Integer size) {
+        return ResponseEntity.ok(chirperService.getByFollowerId(userId, size));
     }
 }

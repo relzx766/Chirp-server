@@ -20,7 +20,7 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class NoticeSendSendStrategy implements MessageSendStrategy<NotificationDto> {
+public class NoticeSendStrategy implements MessageSendStrategy<NotificationDto> {
 
     @Resource
     ObjectMapper objectMapper;
