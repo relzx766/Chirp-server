@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.rholder.retry.RetryException;
+import com.zyq.chirp.adviceclient.dto.ChatDto;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
 import com.zyq.chirp.adviceclient.enums.EntityType;
 import com.zyq.chirp.adviceclient.enums.EventType;
@@ -13,25 +14,25 @@ import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.aspect.ParseMentioned;
 import com.zyq.chirp.chirperserver.aspect.Statistic;
 import com.zyq.chirp.chirperserver.convertor.ChirperConvertor;
-import com.zyq.chirp.chirperserver.domain.enums.ActionTypeEnums;
-import com.zyq.chirp.chirperserver.domain.enums.CacheKey;
-import com.zyq.chirp.chirperserver.domain.enums.ChirperStatus;
-import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
+import com.zyq.chirp.chirperserver.domain.enums.*;
 import com.zyq.chirp.chirperserver.domain.pojo.Chirper;
 import com.zyq.chirp.chirperserver.domain.pojo.Like;
 import com.zyq.chirp.chirperserver.mapper.ChirperMapper;
 import com.zyq.chirp.chirperserver.service.ChirperService;
 import com.zyq.chirp.chirperserver.service.LikeService;
+import com.zyq.chirp.common.domain.enums.OrderEnum;
 import com.zyq.chirp.common.domain.exception.ChirpException;
 import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.common.mq.enums.DefaultOperation;
 import com.zyq.chirp.common.mq.model.Action;
 import com.zyq.chirp.common.util.PageUtil;
 import com.zyq.chirp.common.util.RetryUtil;
+import com.zyq.chirp.common.util.TextUtil;
 import com.zyq.chirp.mediaclient.client.MediaClient;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
 import com.zyq.chirp.userclient.client.UserClient;
 import com.zyq.chirp.userclient.dto.UserDto;
+import com.zyq.chirp.userclient.enums.RelationType;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -97,9 +99,7 @@ public class ChirperServiceImpl implements ChirperService {
     @Override
     @ParseMentioned
     public ChirperDto save(ChirperDto chirperDto) {
-        if (chirperDto.isEmpty()) {
-            throw new ChirpException(Code.ERR_BUSINESS, "推文内容不能为空");
-        }
+        chirperDto = this.getWithPrecondition(chirperDto);
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
         chirper.setConversationId(chirper.getId());
@@ -114,9 +114,19 @@ public class ChirperServiceImpl implements ChirperService {
     @Statistic(id = "#chirperDto.inReplyToChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
     @ParseMentioned
     public ChirperDto reply(ChirperDto chirperDto) {
-        if (chirperDto.isEmpty()) {
-            throw new ChirpException(Code.ERR_BUSINESS, "推文内容不能为空");
+        Chirper target = chirperMapper.selectOne(new LambdaQueryWrapper<Chirper>()
+                .select(Chirper::getId, Chirper::getAuthorId, Chirper::getReplyRange)
+                .eq(Chirper::getId, chirperDto.getInReplyToChirperId())
+                .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus()));
+        ChirperDto targetDto = chirperConvertor.pojoToDto(target);
+        if (targetDto == null) {
+            throw new ChirpException(Code.ERR_BUSINESS, "回复失败，推文不存在或已被删除");
         }
+        Map<Long, Boolean> replyableMap = this.getReplyable(List.of(targetDto), chirperDto.getAuthorId());
+        if (!replyableMap.get(targetDto.getId())) {
+            throw new ChirpException(Code.ERR_BUSINESS, STR."回复失败，该推文仅允许作者\{ReplyRangeEnums.getHint(chirperDto.getReplyRange())}的回复");
+        }
+        chirperDto = this.getWithPrecondition(chirperDto);
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
         chirper.setStatus(ChirperStatus.ACTIVE.getStatus());
@@ -182,47 +192,70 @@ public class ChirperServiceImpl implements ChirperService {
 
     @Override
     public List<ChirperDto> getInteractionInfo(List<ChirperDto> chirperDtos, Long userId) {
-        List<Long> ids = chirperDtos.stream().map(ChirperDto::getId).toList();
-        if (!ids.isEmpty()) {
-            //获取被引用推文的互动信息---
-            Map<Integer, ChirperDto> refers = new HashMap<>();
-            for (int i = 0; i < chirperDtos.size(); i++) {
-                if (ChirperType.FORWARD.name().equals(chirperDtos.get(i).getType()) &&
-                        chirperDtos.get(i).getReferenced() != null) {
-                    refers.put(i, chirperDtos.get(i).getReferenced());
+        try {
+            List<Long> ids = chirperDtos.stream().map(ChirperDto::getId).toList();
+            if (!ids.isEmpty()) {
+                //获取被引用推文的互动信息---
+                Map<Integer, ChirperDto> refers = new HashMap<>();
+                for (int i = 0; i < chirperDtos.size(); i++) {
+                    if (ChirperType.FORWARD.name().equals(chirperDtos.get(i).getType()) &&
+                            chirperDtos.get(i).getReferenced() != null) {
+                        refers.put(i, chirperDtos.get(i).getReferenced());
+                    }
                 }
-            }
-            if (!refers.isEmpty()) {
-                this.getInteractionInfo(new ArrayList<>(refers.values()), userId).forEach(chirperDto -> {
-                    refers.forEach((k, v) -> {
-                        if (chirperDto.getId().equals(v.getId())) {
-                            chirperDtos.get(k).setReferenced(chirperDto);
-                        }
+                if (!refers.isEmpty()) {
+                    this.getInteractionInfo(new ArrayList<>(refers.values()), userId).forEach(chirperDto -> {
+                        refers.forEach((k, v) -> {
+                            if (chirperDto.getId().equals(v.getId())) {
+                                chirperDtos.get(k).setReferenced(chirperDto);
+                            }
+                        });
                     });
+                }
+                var ref = new Object() {
+                    Map<Long, Long> likeMap = new HashMap<>();
+                    Map<Long, Map.Entry<Long, String>> reference = new HashMap<>();
+                    Map<Long, Boolean> replyableMap = new HashMap<>();
+                };
+
+                int threadSize = 3;
+                CountDownLatch latch = new CountDownLatch(threadSize);
+                Thread.ofVirtual().start(() -> {
+                    ref.likeMap = likeService.getLikeInfo(ids, userId)
+                            .stream().collect(Collectors.toMap(Function.identity(), Function.identity()));
+                    latch.countDown();
+                });
+                Thread.ofVirtual().start(() -> {
+                    ref.reference = chirperMapper.selectList(new LambdaQueryWrapper<Chirper>()
+                                    .select(Chirper::getId, Chirper::getReferencedChirperId, Chirper::getType)
+                                    .eq(Chirper::getAuthorId, userId)
+                                    .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
+                                    .in(Chirper::getReferencedChirperId, ids))
+                            .stream()
+                            .collect(Collectors.toMap(Chirper::getId, chirper ->
+                                    Map.entry(chirper.getReferencedChirperId(), chirper.getType())));
+                    latch.countDown();
+                });
+                Thread.ofVirtual().start(() -> {
+                    ref.replyableMap = this.getReplyable(chirperDtos, userId);
+                    latch.countDown();
+                });
+                latch.await();
+                chirperDtos.forEach(chirperDto -> {
+                    Long id = chirperDto.getId();
+                    boolean isLike = ref.likeMap.get(id) != null;
+                    boolean isForward = ref.reference.containsValue(Map.entry(id, ChirperType.FORWARD.name()));
+                    boolean isQuote = ref.reference.containsValue(Map.entry(id, ChirperType.QUOTE.name()));
+                    chirperDto.setIsLike(isLike);
+                    chirperDto.setIsForward(isForward);
+                    chirperDto.setIsQuote(isQuote);
+                    chirperDto.setReplyable(ref.replyableMap.get(id));
                 });
             }
-            //---
-            Map<Long, Long> likeMap = likeService.getLikeInfo(ids, userId)
-                    .stream().collect(Collectors.toMap(Function.identity(), Function.identity()));
-            Map<Long, Map.Entry<Long, String>> reference = chirperMapper.selectList(new LambdaQueryWrapper<Chirper>()
-                            .select(Chirper::getId, Chirper::getReferencedChirperId, Chirper::getType)
-                            .eq(Chirper::getAuthorId, userId)
-                            .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
-                            .in(Chirper::getReferencedChirperId, ids))
-                    .stream()
-                    .collect(Collectors.toMap(Chirper::getId, chirper ->
-                            Map.entry(chirper.getReferencedChirperId(), chirper.getType())));
-            chirperDtos.forEach(chirperDto -> {
-                Long id = chirperDto.getId();
-                boolean isLike = likeMap.get(id) != null;
-                boolean isForward = reference.containsValue(Map.entry(id, ChirperType.FORWARD.name()));
-                boolean isQuote = reference.containsValue(Map.entry(id, ChirperType.QUOTE.name()));
-                chirperDto.setIsLike(isLike);
-                chirperDto.setIsForward(isForward);
-                chirperDto.setIsQuote(isQuote);
-            });
+            return chirperDtos;
+        } catch (InterruptedException e) {
+            throw new ChirpException(Code.ERR_SYSTEM, "获取推文信息失败");
         }
-        return chirperDtos;
     }
 
 
@@ -395,9 +428,7 @@ public class ChirperServiceImpl implements ChirperService {
     @Statistic(id = "#chirperDto.referencedChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
     @ParseMentioned
     public ChirperDto quote(ChirperDto chirperDto) {
-        if (chirperDto.isEmpty()) {
-            throw new ChirpException(Code.ERR_BUSINESS, "推文内容不能为空");
-        }
+        chirperDto = this.getWithPrecondition(chirperDto);
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
         chirper.setConversationId(chirper.getId());
@@ -490,12 +521,11 @@ public class ChirperServiceImpl implements ChirperService {
     }
 
     @Override
-    @Cacheable(value = "chirper:page#4", key = "#page+':'+#chirperId+':'+#userIds+':'+#type+':'+#isMedia")
-    public List<ChirperDto> getPage(Integer page, Long chirperId, Collection<Long> userIds, ChirperType type, Boolean isMedia) {
+    @Cacheable(value = "chirper:page#4", key = "#page+':'+#chirperId+':'+#userIds+':'+#type+':'+#isMedia+':'+#order")
+    public List<ChirperDto> getPage(Integer page, Long chirperId, Collection<Long> userIds, ChirperType type, Boolean isMedia, String order) {
         Page<Chirper> pageSelector = new Page<>(page, pageSize, false);
         LambdaQueryWrapper<Chirper> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus());
-        wrapper.orderByDesc(Chirper::getCreateTime);
         if (chirperId != null) {
             wrapper.eq(Chirper::getInReplyToChirperId, chirperId);
         }
@@ -507,6 +537,12 @@ public class ChirperServiceImpl implements ChirperService {
         }
         if (isMedia != null && isMedia) {
             wrapper.isNotNull(Chirper::getMediaKeys);
+        }
+        OrderEnum orderEnum = OrderEnum.findAndDefault(order);
+        switch (orderEnum) {
+            case ASC -> wrapper.orderByAsc(Chirper::getCreateTime);
+            case DESC -> wrapper.orderByDesc(Chirper::getCreateTime);
+            case HOT -> wrapper.orderByDesc(Chirper::getViewCount);
         }
         //转换为map类型，为下面获取被引用推文准备
         Map<Long, ChirperDto> chirperDtoMap = chirperMapper.selectPage(pageSelector, wrapper).getRecords()
@@ -766,5 +802,61 @@ public class ChirperServiceImpl implements ChirperService {
         return List.of();
     }
 
+    @Override
+    public Map<Long, Boolean> getReplyable(List<ChirperDto> chirperDtos, Long userId) {
+        Set<Long> authors = chirperDtos.stream()
+                .map(ChirperDto::getAuthorId)
+                .collect(Collectors.toSet());
+        authors.add(userId);
+        ResponseEntity<List<UserDto>> response = userClient.getUsernameAndRelation(authors, userId);
+        Map<Long, UserDto> userDtoMap = new HashMap<>();
+        if (response.getStatusCode().is2xxSuccessful()) {
+            List<UserDto> userDtoList = response.getBody();
+            if (userDtoList != null && !userDtoList.isEmpty()) {
+                userDtoMap = userDtoList.stream().collect(Collectors.toMap(UserDto::getId, Function.identity()));
+            }
+        }
+        Map<Long, Boolean> replyable = new HashMap<>();
+        UserDto targetUser = userDtoMap.get(userId);
+        for (ChirperDto chirperDto : chirperDtos) {
+            Long chirperId = chirperDto.getId();
+            if (chirperDto.getAuthorId().equals(userId)) {
+                replyable.put(chirperId, true);
+                continue;
+            }
+            Integer replyRange = chirperDto.getReplyRange();
+            replyRange = replyRange != null ? replyRange : ReplyRangeEnums.EVERYONE.getCode();
+            if (ReplyRangeEnums.EVERYONE.getCode() == replyRange) {
+                replyable.put(chirperId, true);
+            } else {
+                boolean isMentioned = false;
+                if (targetUser != null) {
+                    isMentioned = TextUtil.getIsMentioned(chirperDto.getText(), targetUser.getUsername());
+                }
+                if (isMentioned) {
+                    replyable.put(chirperId, true);
+                } else {
+                    if (ReplyRangeEnums.FOLLOWING.getCode() == replyRange) {
+                        UserDto author = userDtoMap.get(chirperDto.getAuthorId());
+                        boolean able = author != null && RelationType.FOLLOWING.getRelation() == author.getRelation();
+                        replyable.put(chirperId, able);
+                    } else if (ReplyRangeEnums.MENTION.getCode() == replyRange) {
+                        replyable.put(chirperId, false);
+                    }
+                }
+            }
+        }
+        return replyable;
+    }
+
+    @Override
+    public ChirperDto getWithPrecondition(ChirperDto chirperDto) {
+        if (chirperDto.isEmpty()) {
+            throw new ChirpException(Code.ERR_BUSINESS, "推文内容不能为空");
+        }
+        ReplyRangeEnums rangeEnums = ReplyRangeEnums.findByCodeWithDefault(chirperDto.getReplyRange());
+        chirperDto.setReplyRange(rangeEnums.getCode());
+        return chirperDto;
+    }
 
 }

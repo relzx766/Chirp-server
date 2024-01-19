@@ -83,7 +83,7 @@ public class ChatServiceImpl implements ChatService {
                 chatDto.setContent("");
             }
             if (ChatTypeEnum.getEnum(chatDto.getType()) == null) {
-                chatDto.setType(ChatTypeEnum.TEXT.name());
+                chatDto.setType(ChatTypeEnum.FILE.name());
             }
             //为防止用户篡改信息，仅发送引用消息的id，同时保存引用消息
             ChatDto referCopy = chatDto.getReference();

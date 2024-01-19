@@ -1,5 +1,6 @@
 package com.zyq.chirp.chirperserver.service;
 
+import com.zyq.chirp.adviceclient.dto.ChatDto;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperStatus;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
@@ -8,6 +9,7 @@ import com.zyq.chirp.common.mq.model.Action;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface ChirperService {
     ChirperDto save(ChirperDto chirperDto);
@@ -56,7 +58,7 @@ public interface ChirperService {
 
     List<ChirperDto> getById(List<Long> chirperIds);
 
-    List<ChirperDto> getPage(Integer page, Long chirperId, Collection<Long> userIds, ChirperType type, Boolean isMedia);
+    List<ChirperDto> getPage(Integer page, Long chirperId, Collection<Long> userIds, ChirperType type, Boolean isMedia, String order);
 
     List<ChirperDto> search(String keyword, Integer page, Boolean isMedia);
 
@@ -105,4 +107,8 @@ public interface ChirperService {
     Long getAuthorIdByChirperId(Long chirperId);
 
     List<ChirperDto> getByFollowerId(Long userId, Integer size);
+
+    Map<Long, Boolean> getReplyable(List<ChirperDto> chirperDtos, Long userId);
+
+    ChirperDto getWithPrecondition(ChirperDto chirperDto);
 }

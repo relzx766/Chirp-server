@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -81,6 +82,7 @@ public class UserServiceImpl implements UserService {
         }
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getId, userId));
         UserDto userDto = userConvertor.pojoToDto(user);
+        userDto.clearPwd();
         userDto.setFollowNum(Math.toIntExact(relationService.getFollowerCount(userId)));
         userDto.setFollowingNum(Math.toIntExact(relationService.getFollowingCount(userId)));
         if (currentUserId != null) {
@@ -111,6 +113,7 @@ public class UserServiceImpl implements UserService {
                     .stream()
                     .map(user -> {
                         UserDto userDto = userConvertor.pojoToDto(user);
+                        userDto.clearPwd();
                         Integer status = relation.get(userDto.getId());
                         status = status != null ? status : RelationType.UNFOLLOWED.getRelation();
                         userDto.setRelation(status);
@@ -129,6 +132,7 @@ public class UserServiceImpl implements UserService {
         }
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         UserDto userDto = userConvertor.pojoToDto(user);
+        userDto.clearPwd();
         userDto.setFollowNum(Math.toIntExact(relationService.getFollowerCount(userDto.getId())));
         userDto.setFollowingNum(Math.toIntExact(relationService.getFollowingCount(userDto.getId())));
         if (currentUserId != null) {
@@ -160,9 +164,9 @@ public class UserServiceImpl implements UserService {
     public UserDto getDetailByEmail(String email) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getEmail, email)
-                .eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
-                .or()
-                .eq(User::getStatus, AccountStatus.BLOCK.getStatus()));
+                .and(queryWrapper -> queryWrapper.eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
+                        .or()
+                        .eq(User::getStatus, AccountStatus.BLOCK.getStatus())));
         return Optional.ofNullable(user)
                 .map(target -> userConvertor.pojoToDto(target))
                 .orElseThrow(() -> new ChirpException(Code.ERR_BUSINESS, "用户不存在"));
@@ -172,9 +176,9 @@ public class UserServiceImpl implements UserService {
     public UserDto getDetailById(Long userId) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getId, userId)
-                .eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
-                .or()
-                .eq(User::getStatus, AccountStatus.BLOCK.getStatus()));
+                .and(queryWrapper -> queryWrapper.eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
+                        .or()
+                        .eq(User::getStatus, AccountStatus.BLOCK.getStatus())));
         return Optional.ofNullable(user)
                 .map(target -> userConvertor.pojoToDto(target))
                 .orElseThrow(() -> new ChirpException(Code.ERR_BUSINESS, "用户不存在"));
@@ -184,9 +188,9 @@ public class UserServiceImpl implements UserService {
     public UserDto getDetailByUsername(String username) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, username)
-                .eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
-                .or()
-                .eq(User::getStatus, AccountStatus.BLOCK.getStatus()));
+                .and(queryWrapper -> queryWrapper.eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
+                        .or()
+                        .eq(User::getStatus, AccountStatus.BLOCK.getStatus())));
         return Optional.ofNullable(user)
                 .map(target -> userConvertor.pojoToDto(target))
                 .orElseThrow(() -> new ChirpException(Code.ERR_BUSINESS, "用户不存在"));
@@ -207,26 +211,29 @@ public class UserServiceImpl implements UserService {
     public List<UserDto> search(String keyword, Long currentUserId, Integer page) {
         Page<User> userPage = new Page<>(page, pageSize);
         userPage.setSearchCount(false);
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>();
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (currentUserId != null) {
             wrapper.ne(User::getId, currentUserId);
         }
-        wrapper
-                .eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
-                .like(User::getNickname, keyword)
-                .or()
-                .like(User::getUsername, keyword);
+        wrapper.eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
+                .and(queryWrapper -> queryWrapper.like(User::getNickname, keyword)
+                        .or()
+                        .like(User::getUsername, keyword));
 
         List<UserDto> userDtos = userMapper.selectPage(userPage, wrapper
                 )
                 .getRecords()
                 .stream()
-                .map(user -> userConvertor.pojoToDto(user)).toList();
+                .map(user -> {
+                    UserDto userDto = userConvertor.pojoToDto(user);
+                    userDto.clearPwd();
+                    return userDto;
+                }).toList();
         if (Objects.nonNull(currentUserId) && !userDtos.isEmpty()) {
             List<Long> userIds = userDtos.stream().map(UserDto::getId).toList();
             Map<Long, Integer> relationMap = relationService.getUserRelation(userIds, currentUserId)
                     .stream()
-                    .collect(Collectors.toMap(RelationDto::getToId, RelationDto::getStatus));
+                    .collect(Collectors.toMap(RelationDto::getToId, RelationDto::getStatus, (k1, k2) -> k1));
             userDtos.forEach(userDto -> {
                 Integer type = relationMap.get(userDto.getId());
                 type = type != null ? type : RelationType.UNFOLLOWED.getRelation();
@@ -251,6 +258,26 @@ public class UserServiceImpl implements UserService {
                 .stream()
                 .map(user -> userConvertor.pojoToDto(user))
                 .toList();
+    }
+
+    @Override
+    public List<UserDto> getBasicInfo(Collection<Long> userIds, Long targetId) {
+        if (userIds == null || userIds.isEmpty() || targetId == null) {
+            throw new ChirpException(Code.ERR_BUSINESS, "未提供完整的用户id信息");
+        }
+        Map<Long, RelationDto> relationDtoMap = relationService.getUserRelationOfUser(userIds, targetId)
+                .stream().collect(Collectors.toMap(RelationDto::getFromId, Function.identity(), (k1, k2) -> k1));
+        return userMapper.selectList(new LambdaQueryWrapper<User>()
+                        .select(User::getId, User::getUsername)
+                        .in(User::getId, userIds))
+                .stream()
+                .map(user -> {
+                    UserDto userDto = userConvertor.pojoToDto(user);
+                    userDto.setRelation(relationDtoMap.get(userDto.getId()).getStatus());
+                    return userDto;
+                }).toList();
+
+
     }
 
     @Override

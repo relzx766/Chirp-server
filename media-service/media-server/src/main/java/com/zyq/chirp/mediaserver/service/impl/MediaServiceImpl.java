@@ -14,6 +14,8 @@ import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +43,8 @@ public class MediaServiceImpl implements MediaService {
     MediaConvertor mediaConvertor;
     @Value("${default-config.file.upload.url}")
     String UPLOAD_SITE;
-
+    @Resource
+    RedisTemplate redisTemplate;
     @Override
     public MediaDto getById(Integer id) {
         return mediaConvertor.pojoToDto(
@@ -93,6 +96,12 @@ public class MediaServiceImpl implements MediaService {
     @Override
     @Cacheable(key = "#md5")
     public MediaDto getByMd5(String md5) {
+        String key = STR."upload:finish:hash:\{md5}";
+        ValueOperations<String, MediaDto> operations = redisTemplate.opsForValue();
+        MediaDto mediaDto = operations.get(key);
+        if (mediaDto != null) {
+            return mediaDto;
+        }
         return mediaConvertor.pojoToDto(
                 mediaMapper.selectOne(new LambdaQueryWrapper<Media>().eq(Media::getMd5, md5)));
     }
@@ -166,13 +175,13 @@ public class MediaServiceImpl implements MediaService {
             File[] files = dir.listFiles();
             Arrays.sort(files, (f1, f2) -> {
                 String suffix1 = FileUtil.getExtension(f1.getName());
-                String suffix2 = FileUtil.getExtension(f1.getName());
+                String suffix2 = FileUtil.getExtension(f2.getName());
                 int num1 = Integer.parseInt(suffix1);
                 int num2 = Integer.parseInt(suffix2);
                 return num1 - num2;
             });
             String dateDir = LocalDate.now().toString();
-            String filePath = dateDir + "\\" + mediaDto.getMd5() + "." + mediaDto.getExtension();
+            String filePath = STR."\{dateDir}\\\{mediaDto.getMd5()}.\{mediaDto.getExtension()}";
             Path path = Paths.get(BASE_DIR + filePath);
             FileUtil.creatNewFile(path);
             try (FileChannel in = FileChannel.open(path, StandardOpenOption.WRITE)) {

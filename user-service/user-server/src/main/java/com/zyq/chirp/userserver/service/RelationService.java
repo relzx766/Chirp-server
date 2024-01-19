@@ -10,7 +10,21 @@ import java.util.List;
 public interface RelationService {
     Relation getRelationType(Long fromId, Long toId);
 
+    /**
+     * 获取我与用户名的关系，以我为起点，即我=fromId，用户们=toId
+     *
+     * @param userIds      用户们
+     * @param targetUserId 我
+     * @return 关系列表，未查出的以默认关系替代
+     */
     List<RelationDto> getUserRelation(Collection<Long> userIds, Long targetUserId);
+
+    /**
+     * 获取我与用户名的关系，以用户们为起点，即用户们=fromId，我=toId
+     * @param userIds 用户们
+     * @param targetUserId 我
+     * @return 关系列表，未查出的以默认关系替代
+     */
 
     List<RelationDto> getUserRelationOfUser(Collection<Long> userIds, Long targetUserId);
 

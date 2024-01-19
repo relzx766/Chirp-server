@@ -4,6 +4,7 @@ public enum ChatTypeEnum {
     TEXT,
     IMAGE,
     VOICE,
+    VIDEO,
     FILE;
 
     public static ChatTypeEnum getEnum(String type) {

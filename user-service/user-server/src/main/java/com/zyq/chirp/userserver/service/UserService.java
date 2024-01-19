@@ -31,6 +31,15 @@ public interface UserService {
 
     List<UserDto> getBasicInfo(Collection<Long> userIds);
 
+    /**
+     * 获取用户的用户名及与我的关系
+     *
+     * @param userIds  用户
+     * @param targetId 我
+     * @return 用户的用户名及与我的关系
+     */
+    List<UserDto> getBasicInfo(Collection<Long> userIds, Long targetId);
+
     List<Long> getIdByUsername(Collection<String> username);
 
     void createUsernameBloom();

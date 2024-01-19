@@ -1,5 +1,7 @@
 package com.zyq.chirp.mediaserver.util;
 
+import com.zyq.chirp.mediaserver.domain.enums.MediaDataEnums;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.detect.Detector;
@@ -7,10 +9,13 @@ import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
 
-import java.io.File;
-import java.io.IOException;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.nio.file.Path;
+import java.util.Map;
 
+@Slf4j
 public class FileUtil {
 
 
@@ -46,4 +51,11 @@ public class FileUtil {
     public static String getMediaCategory(String mime) {
         return mime.substring(0, mime.lastIndexOf("/"));
     }
+
+    public static Map<String, Integer> getImageSize(File file) throws IOException {
+        BufferedImage image = ImageIO.read(file);
+        return Map.of(MediaDataEnums.WIDTH.name(), image.getWidth(),
+                MediaDataEnums.HEIGHT.name(), image.getHeight());
+    }
+
 }

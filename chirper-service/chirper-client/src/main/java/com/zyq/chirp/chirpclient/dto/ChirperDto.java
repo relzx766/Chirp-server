@@ -49,6 +49,8 @@ public class ChirperDto {
     private Boolean isLike;
     private Boolean isForward;
     private Boolean isQuote;
+    private Integer replyRange;
+    private Boolean replyable;
     private Integer status;
 
     public ChirperDto() {

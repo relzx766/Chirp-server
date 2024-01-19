@@ -16,6 +16,12 @@ public class TextUtil {
         return str;
     }
 
+    public static boolean getIsMentioned(String text, String username) {
+        Pattern pattern = Pattern.compile(STR."@\{username}\\b");
+        Matcher matcher = pattern.matcher(text);
+        return matcher.find();
+    }
+
     public static List<String> findTags(String text) {
         Pattern pattern = Pattern.compile("#[^#\\s]+");
         Matcher matcher = pattern.matcher(text);
@@ -37,4 +43,5 @@ public class TextUtil {
         });
         return str;
     }
+
 }

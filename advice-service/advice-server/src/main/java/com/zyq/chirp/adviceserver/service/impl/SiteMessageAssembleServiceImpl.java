@@ -35,6 +35,11 @@ public class SiteMessageAssembleServiceImpl implements SiteMessageAssembleServic
 
     @Override
     public List<NotificationDto> assemble(List<NotificationDto> messageDtos) {
+        return null;
+    }
+
+ /*   @Override
+    public List<NotificationDto> assemble(List<NotificationDto> messageDtos) {
         List<NotificationDto> chirper = new ArrayList<>();
         List<NotificationDto> user = new ArrayList<>();
         List<NotificationDto> other = new ArrayList<>();
@@ -124,6 +129,6 @@ public class SiteMessageAssembleServiceImpl implements SiteMessageAssembleServic
             e.printStackTrace();
         }
         return messageDtos;
-    }
+    }*/
 
 }

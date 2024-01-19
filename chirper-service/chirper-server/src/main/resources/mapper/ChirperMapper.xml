@@ -246,7 +246,7 @@
     <insert id="addReply">
         insert into tb_chirper(id, author_id, conversation_id, in_reply_to_chirper_id, in_reply_to_user_id, create_time,
                                text, type, media_keys, view_count, reply_count, like_count,
-                               quote_count, forward_count, status)
+                               quote_count, forward_count, reply_range, status)
         select #{id},
                #{authorId},
                tc1.conversation_id,
@@ -261,6 +261,7 @@
                0,
                0,
                0,
+               #{replyRange},
                #{status}
         from tb_chirper tc1
         where tc1.id = #{inReplyToChirperId}
@@ -329,7 +330,8 @@ type=@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE">
 
     <insert id="addQuote">
         insert into tb_chirper(id, author_id, conversation_id, create_time, text, type, referenced_chirper_id,
-                               media_keys, view_count, reply_count, like_count, quote_count, forward_count, status)
+                               media_keys, view_count, reply_count, like_count, quote_count, forward_count, reply_range,
+                               status)
         select #{id},
                #{authorId},
                #{conversationId},
@@ -343,6 +345,7 @@ type=@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE">
                #{likeCount},
                #{quoteCount},
                #{forwardCount},
+               #{replyRange},
                #{status}
         where exists(select id from tb_chirper where id = #{referencedChirperId})
     </insert>

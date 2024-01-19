@@ -61,25 +61,30 @@ public class RelationServiceImpl implements RelationService {
 
     @Override
     public List<RelationDto> getUserRelation(Collection<Long> userIds, Long targetUserId) {
-        ArrayList<Long> noRecordUser = new ArrayList<>(userIds);
-        List<RelationDto> records = new ArrayList<>(relationMapper.selectList(new LambdaQueryWrapper<Relation>()
-                        .eq(Relation::getFromId, targetUserId)
-                        .in(Relation::getToId, userIds))
-                .stream()
-                .map(r -> {
-                    noRecordUser.remove(r.getToId());
-                    return relationConvertor.pojoToDto(r);
-                })
-                .toList());
-        noRecordUser.forEach(id -> {
-            records.add(RelationDto.unFollow(id, targetUserId));
-        });
-        return records;
+        if (targetUserId != null && userIds != null && !userIds.isEmpty()) {
+            ArrayList<Long> noRecordUser = new ArrayList<>(userIds);
+            List<RelationDto> records = new ArrayList<>(relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                            .eq(Relation::getFromId, targetUserId)
+                            .in(Relation::getToId, userIds))
+                    .stream()
+                    .map(r -> {
+                        noRecordUser.remove(r.getToId());
+                        return relationConvertor.pojoToDto(r);
+                    })
+                    .toList());
+            noRecordUser.forEach(id -> {
+                records.add(RelationDto.unFollow(id, targetUserId));
+            });
+            return records;
+        }
+        return List.of();
     }
 
     @Override
     public List<RelationDto> getUserRelationOfUser(Collection<Long> userIds, Long targetUserId) {
-        ArrayList<Long> noRecordUser = new ArrayList<>(userIds);
+        if (targetUserId != null && userIds != null && !userIds.isEmpty()) {
+
+            ArrayList<Long> noRecordUser = new ArrayList<>(userIds);
         List<RelationDto> records = new ArrayList<>(relationMapper.selectList(new LambdaQueryWrapper<Relation>()
                         .eq(Relation::getToId, targetUserId)
                         .in(Relation::getFromId, userIds))
@@ -93,6 +98,8 @@ public class RelationServiceImpl implements RelationService {
             records.add(RelationDto.unFollow(id, targetUserId));
         });
         return records;
+        }
+        return List.of();
     }
 
     @Override

@@ -45,4 +45,8 @@ public class UserDto implements Serializable {
     private Integer followingNum;
     private Integer status;
     private Integer relation;
+
+    public void clearPwd() {
+        this.password = "";
+    }
 }

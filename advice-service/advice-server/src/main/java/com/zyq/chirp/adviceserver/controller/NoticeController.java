@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
 import com.zyq.chirp.adviceserver.service.NotificationService;
 import com.zyq.chirp.adviceserver.service.SiteMessageAssembleService;
+import com.zyq.chirp.adviceserver.strategy.MessageAssembleStrategy;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +21,7 @@ public class NoticeController {
     @Resource
     NotificationService notificationService;
     @Resource
-    SiteMessageAssembleService assembleService;
+    MessageAssembleStrategy<NotificationDto> assembleService;
 
     @GetMapping("/count/unread")
     public ResponseEntity<Map<String, Integer>> getUnreadCount() {

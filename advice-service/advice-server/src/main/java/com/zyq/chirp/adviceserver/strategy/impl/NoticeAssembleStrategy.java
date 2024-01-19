@@ -31,46 +31,48 @@ public class NoticeAssembleStrategy implements MessageAssembleStrategy<Notificat
 
     @Override
     public List<NotificationDto> assemble(List<NotificationDto> messages) {
-
-        CountDownLatch latch = new CountDownLatch(2);
-        Thread.ofVirtual().start(() -> {
-            defaultMessageAssembleStrategy.assemble(messages);
-            latch.countDown();
-        });
-        Thread.ofVirtual().start(() -> {
-            List<Long> chirperIds = new ArrayList<>();
-            messages.forEach(notificationDto -> {
-                try {
-                    Long sonEntityId = notificationDto.getSonEntity() != null ? Long.parseLong(notificationDto.getSonEntity()) : null;
-                    Long entityId = notificationDto.getEntity() != null ? Long.parseLong(notificationDto.getEntity()) : null;
-                    chirperIds.add(sonEntityId);
-                    chirperIds.add(entityId);
-                } catch (Exception e) {
-                    log.warn("组装完整站内信，转化实体id时发生错误{}", e.getCause());
-                }
+        if (messages != null && !messages.isEmpty()) {
+            Long receiverId = messages.getFirst().getReceiverId();
+            CountDownLatch latch = new CountDownLatch(2);
+            Thread.ofVirtual().start(() -> {
+                defaultMessageAssembleStrategy.assemble(messages);
+                latch.countDown();
             });
-            if (!chirperIds.isEmpty()) {
-                List<ChirperDto> chirperDtos = chirperClient.getContent(chirperIds).getBody();
-                if (chirperDtos != null && !chirperDtos.isEmpty()) {
-                    Map<Long, ChirperDto> collect = chirperDtos.stream().collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
-                    messages.forEach(notificationDto -> {
-                        try {
-                            Long sonEntityId = notificationDto.getSonEntity() != null ? Long.parseLong(notificationDto.getSonEntity()) : null;
-                            Long entityId = notificationDto.getEntity() != null ? Long.parseLong(notificationDto.getEntity()) : null;
-                            notificationDto.setEntity(objectMapper.writeValueAsString(collect.get(entityId)));
-                            notificationDto.setSonEntity(objectMapper.writeValueAsString(collect.get(sonEntityId)));
-                        } catch (JsonProcessingException e) {
-                            log.warn("组装完整站内信，转化实体id时发生错误{}", e.getCause());
-                        }
-                    });
+            Thread.ofVirtual().start(() -> {
+                List<Long> chirperIds = new ArrayList<>();
+                messages.forEach(notificationDto -> {
+                    try {
+                        Long sonEntityId = notificationDto.getSonEntity() != null ? Long.parseLong(notificationDto.getSonEntity()) : null;
+                        Long entityId = notificationDto.getEntity() != null ? Long.parseLong(notificationDto.getEntity()) : null;
+                        chirperIds.add(sonEntityId);
+                        chirperIds.add(entityId);
+                    } catch (Exception e) {
+                        log.warn("组装完整站内信，转化实体id时发生错误", e.getCause());
+                    }
+                });
+                if (!chirperIds.isEmpty()) {
+                    List<ChirperDto> chirperDtos = chirperClient.getContent(chirperIds, receiverId).getBody();
+                    if (chirperDtos != null && !chirperDtos.isEmpty()) {
+                        Map<Long, ChirperDto> collect = chirperDtos.stream().collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
+                        messages.forEach(notificationDto -> {
+                            try {
+                                Long sonEntityId = notificationDto.getSonEntity() != null ? Long.parseLong(notificationDto.getSonEntity()) : null;
+                                Long entityId = notificationDto.getEntity() != null ? Long.parseLong(notificationDto.getEntity()) : null;
+                                notificationDto.setEntity(objectMapper.writeValueAsString(collect.get(entityId)));
+                                notificationDto.setSonEntity(objectMapper.writeValueAsString(collect.get(sonEntityId)));
+                            } catch (JsonProcessingException e) {
+                                log.warn("组装完整站内信，转化实体id时发生错误", e.getCause());
+                            }
+                        });
+                    }
                 }
+                latch.countDown();
+            });
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new ChirpException(Code.ERR_SYSTEM, "线程中断，服务器异常");
             }
-            latch.countDown();
-        });
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            throw new ChirpException(Code.ERR_SYSTEM, "线程中断，服务器异常");
         }
         return messages;
     }

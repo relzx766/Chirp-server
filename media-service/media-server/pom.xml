@@ -79,6 +79,9 @@
             <artifactId>tika-parsers</artifactId>
             <version>1.28.3</version>
         </dependency>
+        <!--文件元数据处理-->
+
+
         <!-- Sa-Token 权限认证，在线文档：https://sa-token.cc -->
         <dependency>
             <groupId>cn.dev33</groupId>

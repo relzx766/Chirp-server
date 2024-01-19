@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.zyq.chirp.chirperserver.domain.enums.ReplyRangeEnums;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,19 +30,15 @@ public class Chirper {
     private Long referencedChirperId;
     @TableField(value = "media_keys", typeHandler = JacksonTypeHandler.class)
     private List<Integer> mediaKeys;
-    private Integer viewCount;
-    private Integer likeCount;
-    private Integer forwardCount;
-    private Integer quoteCount;
-    private Integer replyCount;
+    private Integer viewCount = 0;
+    private Integer likeCount = 0;
+    private Integer forwardCount = 0;
+    private Integer quoteCount = 0;
+    private Integer replyCount = 0;
+    private Integer replyRange = ReplyRangeEnums.EVERYONE.getCode();
     private Integer status;
 
     public Chirper() {
         this.createTime = new Timestamp(System.currentTimeMillis());
-        this.likeCount = 0;
-        this.forwardCount = 0;
-        this.quoteCount = 0;
-        this.viewCount = 0;
-        this.replyCount = 0;
     }
 }

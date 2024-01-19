@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/user")
@@ -127,5 +128,10 @@ public class UserController {
     @GetMapping("/email/check/{email}")
     public ResponseEntity<Boolean> checkEmail(@PathVariable("email") String email) {
         return ResponseEntity.ok(userService.isExistByEmail(email));
+    }
+
+    @PostMapping("/basic_info/rela")
+    public ResponseEntity<List<UserDto>> getUsernameAndRelation(@RequestParam("userIds") Set<Long> userIds, @RequestParam("id") Long targetId) {
+        return ResponseEntity.ok(userService.getBasicInfo(userIds, targetId));
     }
 }

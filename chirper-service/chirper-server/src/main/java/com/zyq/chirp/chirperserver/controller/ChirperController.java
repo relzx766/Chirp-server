@@ -108,7 +108,7 @@ public class ChirperController {
                                                     @Nullable @RequestParam("userId") List<Long> userId,
                                                     @Nullable @RequestParam("type") String type,
                                                     @Nullable @RequestParam("isMedia") Boolean isMedia) {
-        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, userId, ChirperType.find(type), isMedia);
+        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, userId, ChirperType.find(type), isMedia, null);
         if (StpUtil.isLogin()) {
             chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
         }
@@ -129,9 +129,10 @@ public class ChirperController {
 
     @GetMapping("/child/{id}/{page}")
     public ResponseEntity<List<ChirperDto>> getChildChirper(@PathVariable("id") Long chirperId,
-                                                            @PathVariable("page") Integer page) {
+                                                            @PathVariable("page") Integer page,
+                                                            @Nullable @RequestParam("order") String order) {
 
-        List<ChirperDto> chirperDtos = chirperService.getPage(page, chirperId, null, null, null);
+        List<ChirperDto> chirperDtos = chirperService.getPage(page, chirperId, null, null, null, order);
         if (StpUtil.isLogin()) {
             chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
         }
@@ -145,7 +146,7 @@ public class ChirperController {
                                                         @Nullable @RequestParam("media") Boolean media) {
 
 
-        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, List.of(authorId), ChirperType.find(type), media);
+        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, List.of(authorId), ChirperType.find(type), media, null);
         if (StpUtil.isLogin()) {
             chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
         }
@@ -168,8 +169,12 @@ public class ChirperController {
     }
 
     @PostMapping("/content")
-    public ResponseEntity<List<ChirperDto>> getContent(@RequestParam("ids") List<Long> ids) {
-        return ResponseEntity.ok(chirperService.getById(ids));
+    public ResponseEntity<List<ChirperDto>> getContent(@RequestParam("ids") List<Long> ids, @RequestParam("userId") Long userId) {
+        List<ChirperDto> chirperDtoList = chirperService.getById(ids);
+        if (userId != null) {
+            chirperService.getInteractionInfo(chirperDtoList, userId);
+        }
+        return ResponseEntity.ok(chirperDtoList);
     }
 
     @GetMapping("/trend/{page}")
