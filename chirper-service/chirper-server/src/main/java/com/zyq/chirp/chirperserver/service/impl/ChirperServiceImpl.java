@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.rholder.retry.RetryException;
-import com.zyq.chirp.adviceclient.dto.ChatDto;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
 import com.zyq.chirp.adviceclient.enums.EntityType;
 import com.zyq.chirp.adviceclient.enums.EventType;
@@ -103,12 +102,13 @@ public class ChirperServiceImpl implements ChirperService {
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
         chirper.setConversationId(chirper.getId());
-        chirper.setStatus(ChirperStatus.ACTIVE.getStatus());
         chirper.setType(ChirperType.ORIGINAL.toString());
-        chirper.setCreateTime(new Timestamp(System.currentTimeMillis()));
         chirperMapper.insert(chirper);
-        return chirperConvertor.pojoToDto(chirper);
+        chirperDto = chirperConvertor.pojoToDto(chirper);
+        this.postDelay(chirperDto);
+        return chirperDto;
     }
+
 
     @Override
     @Statistic(id = "#chirperDto.inReplyToChirperId", key = CacheKey.VIEW_COUNT_BOUND_KEY)
@@ -129,13 +129,13 @@ public class ChirperServiceImpl implements ChirperService {
         chirperDto = this.getWithPrecondition(chirperDto);
         Chirper chirper = chirperConvertor.dtoToPojo(chirperDto);
         chirper.setId(IdWorker.getId());
-        chirper.setStatus(ChirperStatus.ACTIVE.getStatus());
         chirper.setType(ChirperType.REPLY.toString());
-        chirper.setCreateTime(new Timestamp(System.currentTimeMillis()));
         boolean isInsert = chirperMapper.addReply(chirper) > 0;
         if (!isInsert) {
             throw new ChirpException(Code.ERR_BUSINESS, "回复失败");
         }
+        chirperDto = chirperConvertor.pojoToDto(chirper);
+        this.postDelay(chirperDto);
         //评论数量+1
         Action<Long, Long> action = new Action<>(ActionTypeEnums.REPLY.getAction(),
                 DefaultOperation.INCREMENT.getOperation(),
@@ -153,7 +153,7 @@ public class ChirperServiceImpl implements ChirperService {
                 .senderId(chirper.getAuthorId())
                 .build();
         kafkaTemplate.send(REPLY_MSG_TOPIC, message);
-        return chirperConvertor.pojoToDto(chirper);
+        return chirperDto;
     }
 
     @Override
@@ -433,12 +433,12 @@ public class ChirperServiceImpl implements ChirperService {
         chirper.setId(IdWorker.getId());
         chirper.setConversationId(chirper.getId());
         chirper.setType(ChirperType.QUOTE.toString());
-        chirper.setStatus(ChirperStatus.ACTIVE.getStatus());
-        chirper.setCreateTime(new Timestamp(System.currentTimeMillis()));
         boolean isInsert = chirperMapper.addQuote(chirper) > 0;
         if (!isInsert) {
             throw new ChirpException(Code.ERR_BUSINESS, "发布失败");
         }
+        chirperDto = chirperConvertor.pojoToDto(chirper);
+        this.postDelay(chirperDto);
         Action<Long, Long> action = new Action<>(
                 ActionTypeEnums.QUOTE.getAction(),
                 DefaultOperation.INCREMENT.getOperation(),
@@ -455,7 +455,7 @@ public class ChirperServiceImpl implements ChirperService {
                 .entityType(EntityType.CHIRPER.name())
                 .senderId(chirper.getAuthorId()).build();
         kafkaTemplate.send(QUOTE_MSG_TOPIC, messageDto);
-        return chirperConvertor.pojoToDto(chirper);
+        return chirperDto;
     }
 
     @Override
@@ -856,7 +856,51 @@ public class ChirperServiceImpl implements ChirperService {
         }
         ReplyRangeEnums rangeEnums = ReplyRangeEnums.findByCodeWithDefault(chirperDto.getReplyRange());
         chirperDto.setReplyRange(rangeEnums.getCode());
+        chirperDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
+        Timestamp activeTime = chirperDto.getActiveTime();
+        if (activeTime != null && activeTime.getTime() > chirperDto.getCreateTime().getTime()) {
+            chirperDto.setStatus(ChirperStatus.DELAY.getStatus());
+        } else {
+            chirperDto.setActiveTime(chirperDto.getCreateTime());
+            chirperDto.setStatus(ChirperStatus.ACTIVE.getStatus());
+        }
         return chirperDto;
+    }
+
+    @Override
+    public void postDelay(ChirperDto chirperDto) {
+        String key = STR."\{CacheKey.DELAY_POST_KEY.getKey()}:\{chirperDto.getId()}";
+        long between = chirperDto.getActiveTime().getTime() - chirperDto.getCreateTime().getTime();
+        redisTemplate.opsForValue().set(key, 1, Duration.ofMillis(between));
+    }
+
+    @Override
+    public void activeDelay(Collection<Long> chirperIds) {
+        try {
+            RetryUtil.doDBRetry(() ->
+                    chirperMapper.update(null, new LambdaUpdateWrapper<Chirper>()
+                            .set(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
+                            .ne(Chirper::getStatus, ChirperStatus.DELETE.getStatus())
+                            .ne(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
+                            .eq(Chirper::getStatus, ChirperStatus.DELAY.getStatus())
+                            .in(Chirper::getId, chirperIds))
+            );
+        } catch (ExecutionException e) {
+            log.error("激活延时推文时发生无法成功的错误，推文=>{}，错误=>", chirperIds, e);
+        } catch (RetryException e) {
+            log.error("激活延时推文失败，推文=>{}，错误=>", chirperIds, e);
+        }
+
+    }
+
+    @Override
+    public void activeDelayAuto() {
+        chirperMapper.update(null, new LambdaUpdateWrapper<Chirper>()
+                .set(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
+                .ne(Chirper::getStatus, ChirperStatus.DELETE.getStatus())
+                .ne(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
+                .eq(Chirper::getStatus, ChirperStatus.DELAY.getStatus())
+                .le(Chirper::getActiveTime, new Timestamp(System.currentTimeMillis())));
     }
 
 }

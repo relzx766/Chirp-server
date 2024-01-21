@@ -35,6 +35,12 @@ public enum ReplyRangeEnums {
         return rangeEnums != null ? rangeEnums : ReplyRangeEnums.EVERYONE;
     }
 
+    public static ReplyRangeEnums findByCodeWithDefault(Integer code) {
+        if (code == null) {
+            return ReplyRangeEnums.EVERYONE;
+        }
+        return findByCodeWithDefault(code.intValue());
+    }
     public static String getHint(int code) {
         return switch (findByCodeWithDefault(code)) {
             case EVERYONE -> "所有人";

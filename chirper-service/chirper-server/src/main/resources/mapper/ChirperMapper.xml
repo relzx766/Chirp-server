@@ -245,6 +245,7 @@
 
     <insert id="addReply">
         insert into tb_chirper(id, author_id, conversation_id, in_reply_to_chirper_id, in_reply_to_user_id, create_time,
+                               active_time,
                                text, type, media_keys, view_count, reply_count, like_count,
                                quote_count, forward_count, reply_range, status)
         select #{id},
@@ -253,6 +254,7 @@
                #{inReplyToChirperId},
                tc1.author_id,
                #{createTime},
+               #{activeTime},
                #{text},
                #{type},
                #{mediaKeys,typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler},
@@ -329,13 +331,15 @@ type=@com.zyq.chirp.chirperserver.domain.enums.ChirperType@QUOTE">
         </insert>-->
 
     <insert id="addQuote">
-        insert into tb_chirper(id, author_id, conversation_id, create_time, text, type, referenced_chirper_id,
+        insert into tb_chirper(id, author_id, conversation_id, create_time, active_time, text, type,
+                               referenced_chirper_id,
                                media_keys, view_count, reply_count, like_count, quote_count, forward_count, reply_range,
                                status)
         select #{id},
                #{authorId},
                #{conversationId},
                #{createTime},
+               #{activeTime},
                #{text},
                #{type},
                #{referencedChirperId},

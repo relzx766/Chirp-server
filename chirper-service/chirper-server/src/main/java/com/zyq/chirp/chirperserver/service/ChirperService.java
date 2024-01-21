@@ -1,6 +1,5 @@
 package com.zyq.chirp.chirperserver.service;
 
-import com.zyq.chirp.adviceclient.dto.ChatDto;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperStatus;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
@@ -9,7 +8,6 @@ import com.zyq.chirp.common.mq.model.Action;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public interface ChirperService {
     ChirperDto save(ChirperDto chirperDto);
@@ -111,4 +109,10 @@ public interface ChirperService {
     Map<Long, Boolean> getReplyable(List<ChirperDto> chirperDtos, Long userId);
 
     ChirperDto getWithPrecondition(ChirperDto chirperDto);
+
+    void postDelay(ChirperDto chirperDto);
+
+    void activeDelay(Collection<Long> chirperIds);
+
+    void activeDelayAuto();
 }

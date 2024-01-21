@@ -49,6 +49,10 @@ spring:
           max-idle: 8
           min-idle: 0
           max-wait: -1
+        cluster:
+          refresh:
+            adaptive: true
+            period: 30000
   kafka:
     bootstrap-servers: 192.168.169.129:19092
     consumer:

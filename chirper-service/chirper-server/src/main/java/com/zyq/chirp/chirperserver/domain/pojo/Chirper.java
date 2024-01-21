@@ -25,6 +25,10 @@ public class Chirper {
     private Long inReplyToUserId;
     private Long inReplyToChirperId;
     private Timestamp createTime;
+    /**
+     * 什么时候激活
+     */
+    private Timestamp activeTime;
     private String text;
     private String type;
     private Long referencedChirperId;

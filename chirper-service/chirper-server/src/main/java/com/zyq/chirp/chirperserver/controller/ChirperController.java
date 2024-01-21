@@ -96,7 +96,7 @@ public class ChirperController {
     @PostMapping("/page/id")
     public ResponseEntity<List<ChirperDto>> getByIds(@RequestParam("ids") List<Long> ids) {
         List<ChirperDto> chirperDtos = chirperService.getById(ids);
-        if (StpUtil.isLogin()) {
+        if (StpUtil.isLogin() && chirperDtos != null && !chirperDtos.isEmpty()) {
             chirperDtos = chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
         }
         return ResponseEntity.ok(chirperDtos);

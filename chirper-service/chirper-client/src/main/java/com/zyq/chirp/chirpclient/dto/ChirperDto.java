@@ -33,6 +33,7 @@ public class ChirperDto {
     private Long inReplyToChirperId;
 
     private Timestamp createTime;
+    private Timestamp activeTime;
     @Length(max = 1000, message = "最大字数为1000")
     private String text;
     private String type;

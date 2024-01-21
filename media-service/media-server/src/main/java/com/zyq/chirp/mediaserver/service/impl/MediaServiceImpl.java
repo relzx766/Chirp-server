@@ -128,13 +128,13 @@ public class MediaServiceImpl implements MediaService {
             throw new FileExistsException(media);
         }
         try {
-            String filePath = LocalDate.now() + "\\" + mediaDto.getMd5() + "." + mediaDto.getExtension();
+            String filePath = STR."\{LocalDate.now()}\\\{mediaDto.getMd5()}.\{mediaDto.getExtension()}";
             Path path = Paths.get(BASE_DIR + filePath);
             FileUtil.creatNewFile(path);
             Files.write(path, file);
             mediaDto.setName(path.getFileName().toString());
             mediaDto.setSize((long) file.length);
-            mediaDto.setType(FileUtil.getMime(path));
+            mediaDto.setType(mediaDto.getExtension());
             mediaDto.setCategory(FileUtil.getMediaCategory(mediaDto.getType()));
             mediaDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
             mediaDto.setUrl(UPLOAD_SITE + filePath);
@@ -151,7 +151,7 @@ public class MediaServiceImpl implements MediaService {
             throw new FileExistsException(media);
         }
         try {
-            String filePath = BASE_DIR + hash + "\\" + filename + "." + seq.toString();
+            String filePath = STR."\{BASE_DIR}\{hash}\\\{filename}.\{seq.toString()}";
             Path path = Paths.get(filePath);
             FileUtil.creatNewFile(path);
             Files.write(path, file);
@@ -196,7 +196,7 @@ public class MediaServiceImpl implements MediaService {
                 mediaDto.setSize(in.size());
             }
             Files.delete(dir.toPath());
-            mediaDto.setType(FileUtil.getMime(path));
+            mediaDto.setType(mediaDto.getExtension());
             mediaDto.setCategory(FileUtil.getMediaCategory(mediaDto.getType()));
             mediaDto.setName(path.getFileName().toString());
             mediaDto.setCreateTime(new Timestamp(System.currentTimeMillis()));

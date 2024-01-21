@@ -1,6 +1,9 @@
 package com.zyq.chirp.mediaserver.util;
 
+import com.zyq.chirp.mediaserver.domain.enums.FileCategoryEnums;
+import com.zyq.chirp.mediaserver.domain.enums.ImageEnums;
 import com.zyq.chirp.mediaserver.domain.enums.MediaDataEnums;
+import com.zyq.chirp.mediaserver.domain.enums.VideoEnums;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
 import org.apache.tika.config.TikaConfig;
@@ -11,7 +14,8 @@ import org.apache.tika.mime.MediaType;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -48,8 +52,16 @@ public class FileUtil {
         return mediaType.getType();
     }
 
-    public static String getMediaCategory(String mime) {
-        return mime.substring(0, mime.lastIndexOf("/"));
+    public static String getMediaCategory(String extension) {
+        ImageEnums imageEnums = ImageEnums.find(extension);
+        if (imageEnums != null) {
+            return FileCategoryEnums.IMAGE.name();
+        }
+        VideoEnums videoEnums = VideoEnums.find(extension);
+        if (videoEnums != null) {
+            return FileCategoryEnums.VIDEO.name();
+        }
+        return FileCategoryEnums.FILE.name();
     }
 
     public static Map<String, Integer> getImageSize(File file) throws IOException {

@@ -100,7 +100,7 @@ gateway、dns1只要与ip不同就行，ip取决你的VMware网络设置
 version: "3.6"
 services:
   redis-node-1:
-    imageEnums: redislabs/rebloom # 基础镜像
+    image: redislabs/rebloom # 基础镜像
     container_name: redis-node-1 # 容器服务名
     environment: # 环境变量
       - PORT=6379 # 跟conf 里的配置一样的端口
@@ -116,7 +116,7 @@ services:
       - /cluster/redis/6379/data:/data
 
   redis-node-2:
-    imageEnums: redislabs/rebloom
+    image: redislabs/rebloom
     container_name: redis-node-2
     environment:
       - PORT=6380
@@ -132,7 +132,7 @@ services:
       - /cluster/redis/6380/data:/data
 
   redis-node-3:
-    imageEnums: redislabs/rebloom
+    image: redislabs/rebloom
     container_name: redis-node-3
     environment:
       - PORT=6381
@@ -148,7 +148,7 @@ services:
       - /cluster/redis/6381/data:/data
 
   redis-node-4:
-    imageEnums: redislabs/rebloom
+    image: redislabs/rebloom
     container_name: redis-node-4
     environment:
       - PORT=6382
@@ -164,7 +164,7 @@ services:
       - /cluster/redis/6382/data:/data
 
   redis-node-5:
-    imageEnums: redislabs/rebloom
+    image: redislabs/rebloom
     container_name: redis-node-5
     environment:
       - PORT=6383
@@ -180,7 +180,7 @@ services:
       - /cluster/redis/6383/data:/data
 
   redis-node-6:
-    imageEnums: redislabs/rebloom
+    image: redislabs/rebloom
     container_name: redis-node-6
     environment:
       - PORT=6384
@@ -216,7 +216,7 @@ cluster-node-timeout 15000
 cluster-announce-ip 192.168.233.111
 cluster-announce-port 6384
 cluster-announce-bus-port 16384
-
+notify-keyspace-events Ex
 ```
 
 运行命令
@@ -243,6 +243,6 @@ docker exec -it redis-node-1 /bin/bash
 redis-cli --cluster create 192.168.233.111:6379 192.168.233.111:6380 192.168.233.111:6381 192.168.233.111:6382 192.168.233.111:6383 192.168.233.111:6384 --cluster-replicas 1
 ```
 
-![](https://gitee.com/niceyoo/blog/raw/master/img/imageEnums-20201210223827327.png)
+![](https://gitee.com/niceyoo/blog/raw/master/img/image-20201210223827327.png)
 参考:[https://www.cnblogs.com/niceyoo/p/14118146.html](https://www.cnblogs.com/niceyoo/p/14118146.html)<br>
 完成<br>

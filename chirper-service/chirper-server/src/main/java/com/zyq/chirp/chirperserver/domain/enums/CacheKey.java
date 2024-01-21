@@ -7,7 +7,11 @@ public enum CacheKey {
     VIEW_COUNT_BOUND_KEY("count:view"),
     FORWARD_INFO_BOUND_KEY("chirper:forward"),
     TEND_TAG_BOUND_KEY("trend:tag"),
-    TEND_POST_BOUND_KEY("trend:post");
+    TEND_POST_BOUND_KEY("trend:post"),
+    DELAY_POST_KEY("chirper:delay"),
+
+
+    ;
     private final String key;
 
     CacheKey(String key) {
