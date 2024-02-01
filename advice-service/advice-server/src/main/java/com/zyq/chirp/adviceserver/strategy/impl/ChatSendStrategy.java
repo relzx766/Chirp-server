@@ -2,8 +2,8 @@ package com.zyq.chirp.adviceserver.strategy.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.ChatDto;
-import com.zyq.chirp.adviceclient.enums.MessageTypeEnum;
 import com.zyq.chirp.adviceserver.domain.enums.ChatStatusEnum;
+import com.zyq.chirp.adviceserver.domain.enums.MessageTypeEnums;
 import com.zyq.chirp.adviceserver.exception.SendFailedException;
 import com.zyq.chirp.adviceserver.strategy.MessageAssembleStrategy;
 import com.zyq.chirp.adviceserver.strategy.MessageSendStrategy;
@@ -35,7 +35,7 @@ public class ChatSendStrategy implements MessageSendStrategy<ChatDto> {
         sessions.forEach(session -> {
             try {
                 if (session.isOpen()) {
-                    session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnum.CHAT.name(), messageDtos)));
+                    session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnums.CHAT.name(), messageDtos)));
                 }
             } catch (IOException e) {
                 throw new SendFailedException(e.getMessage(), e.getCause(), Code.ERR_SYSTEM.getCode(), messageDtos);

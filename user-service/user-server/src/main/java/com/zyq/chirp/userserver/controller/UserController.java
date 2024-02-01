@@ -1,12 +1,10 @@
 package com.zyq.chirp.userserver.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.userclient.dto.UserDto;
 import com.zyq.chirp.userserver.service.RelationService;
 import com.zyq.chirp.userserver.service.UserService;
-import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -26,40 +24,34 @@ public class UserController {
     @Resource
     RelationService relationService;
 
-    /**
-     * 给auth调用
-     *
-     * @param userDto
-     * @return
-     */
     @PostMapping("/add")
     public ResponseEntity<UserDto> addUser(@RequestBody @Validated UserDto userDto) {
         return ResponseEntity.ok(userService.save(userDto));
     }
 
+    @PostMapping("/profile")
+    public ResponseEntity<List<UserDto>> getProfiles(@RequestBody List<Long> userIds) {
+        return ResponseEntity.ok(userService.getByIds(userIds, StpUtil.getLoginIdAsLong()));
+    }
     @PostMapping("/profile/update")
-    public ResponseEntity updateProfile(@RequestBody UserDto userDto) throws JsonProcessingException {
+    public ResponseEntity<Boolean> updateProfile(@RequestBody UserDto userDto) {
         userDto.setId(StpUtil.getLoginIdAsLong());
         userService.update(userDto);
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(true);
     }
 
     @GetMapping("/load")
     public ResponseEntity<UserDto> loadUser() {
         return ResponseEntity.ok(userService.getById(StpUtil.getLoginIdAsLong(), null));
     }
-    @GetMapping("/profile/{account}")
-    public ResponseEntity<UserDto> getProfile(@PathVariable("account") String account,
-                                              @Nullable @RequestParam("type") String type) {
+
+    @GetMapping("/profile/{username}")
+    public ResponseEntity<UserDto> getProfile(@PathVariable("username") String username) {
         Long currentUserId = null;
         if (StpUtil.isLogin()) {
             currentUserId = StpUtil.getLoginIdAsLong();
         }
-
-        if (type != null) {
-            return ResponseEntity.ok(userService.getByUsername(account, currentUserId));
-        }
-        return ResponseEntity.ok(userService.getById(Long.parseLong(account), currentUserId));
+        return ResponseEntity.ok(userService.getByUsername(username, currentUserId));
     }
 
 

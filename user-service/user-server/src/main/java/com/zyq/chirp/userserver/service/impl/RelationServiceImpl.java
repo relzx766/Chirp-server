@@ -3,9 +3,6 @@ package com.zyq.chirp.userserver.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.EntityType;
-import com.zyq.chirp.adviceclient.enums.EventType;
-import com.zyq.chirp.adviceclient.enums.NoticeType;
 import com.zyq.chirp.common.domain.exception.ChirpException;
 import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.common.mq.model.Message;
@@ -25,7 +22,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -164,18 +160,11 @@ public class RelationServiceImpl implements RelationService {
                 RelationType.FOLLOWING.getRelation());
         relationMapper.replace(relation);
         Thread.ofVirtual().start(() -> {
-            Boolean absent = redisTemplate.opsForValue().setIfAbsent(STR. "\{ EventType.FOLLOW.name() }:\{ fromId }:\{ toId }" , 1, Duration.ofHours(expire));
-            if (Boolean.TRUE.equals(absent)) {
                 NotificationDto messageDto = NotificationDto.builder()
                         .receiverId(toId)
-                        .event(EventType.FOLLOW.name())
-                        .entityType(EntityType.USER.name())
-                        .noticeType(NoticeType.USER.name())
                         .senderId(fromId)
                         .build();
                 kafkaTemplate.send(follow, messageDto);
-            }
-
         });
 
     }

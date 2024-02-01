@@ -11,7 +11,6 @@ public interface NotificationService {
 
     void saveBatch(Collection<Notification> notifications);
 
-    List<NotificationDto> getByReceiverId(Long receiverId);
 
 
     List<NotificationDto> getPageByReceiverId(Integer page, Long receiverId);
@@ -20,9 +19,4 @@ public interface NotificationService {
 
     void readAll(Long receiverId);
 
-    List<NotificationDto> getUnReadByReceiverId(Long receiverId);
-
-    void markAsRead(Long messageId, Long receiverId);
-
-    void markAsRead(Collection<Long> messageIds, Long receiverId);
 }

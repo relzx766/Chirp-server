@@ -50,7 +50,7 @@ public class ChatServiceImpl implements ChatService {
     ChatMapper messageMapper;
     @Resource
     ChatConvertor convertor;
-    private static final Map<String, RedisSubscribeListener> redisSubMap = new HashMap<>();
+    private static final Map<String, RedisSubscribeListener> redisPSubMap = new HashMap<>();
     @Value("${default-config.page-size}")
     Integer pageSize;
     @Value("${mq.topic.site-message.chat}")
@@ -174,11 +174,11 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public void connect(Long userId, Session session) {
         kafkaTemplate.send(connectTopic, userId);
-        if (redisSubMap.containsKey(userId.toString())) {
-            redisSubMap.get(userId.toString()).addSession(session);
+        if (redisPSubMap.containsKey(userId.toString())) {
+            redisPSubMap.get(userId.toString()).addSession(session);
         } else {
             RedisSubscribeListener subscribeListener = new RedisSubscribeListener(session);
-            redisSubMap.put(userId.toString(), subscribeListener);
+            redisPSubMap.put(userId.toString(), subscribeListener);
             redisMessageListenerContainer.addMessageListener(subscribeListener, new ChannelTopic(messageTopic + userId));
         }
     }
@@ -186,11 +186,11 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public void disconnect(Long userId, Session session) {
         kafkaTemplate.send(disconnectTopic, userId);
-        RedisSubscribeListener listener = redisSubMap.get(userId.toString());
+        RedisSubscribeListener listener = redisPSubMap.get(userId.toString());
         listener.removeSession(session.getId());
         if (listener.getOpenSessionSize() <= 0) {
             redisMessageListenerContainer.removeMessageListener(listener);
-            redisSubMap.remove(userId.toString());
+            redisPSubMap.remove(userId.toString());
         }
     }
 
@@ -363,19 +363,22 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public List<ChatDto> getChatHistory(String conversationId, Long userId, Integer page, Integer size) {
-        Page<Chat> searchPage = new Page<>(page, size);
-        searchPage.setSearchCount(false);
-        List<ChatDto> chatDtos = messageMapper.selectPage(searchPage, new LambdaQueryWrapper<Chat>()
-                        .eq(Chat::getConversationId, conversationId)
-                        .notIn(Chat::getStatus, ChatStatusEnum.DELETE, userId)
-                        .orderByDesc(Chat::getCreateTime))
-                .getRecords()
-                .stream()
-                .map(chat ->
-                        convertor.pojoToDto(chat)
-                )
-                .toList();
-        return this.getReference(chatDtos);
+        if (ChatUtil.isParticipant(conversationId, userId)) {
+            Page<Chat> searchPage = new Page<>(page, size);
+            searchPage.setSearchCount(false);
+            List<ChatDto> chatDtos = messageMapper.selectPage(searchPage, new LambdaQueryWrapper<Chat>()
+                            .eq(Chat::getConversationId, conversationId)
+                            .notIn(Chat::getStatus, ChatStatusEnum.DELETE, userId)
+                            .orderByDesc(Chat::getCreateTime))
+                    .getRecords()
+                    .stream()
+                    .map(chat ->
+                            convertor.pojoToDto(chat)
+                    )
+                    .toList();
+            return this.getReference(chatDtos);
+        }
+        return List.of();
     }
 
     @Override

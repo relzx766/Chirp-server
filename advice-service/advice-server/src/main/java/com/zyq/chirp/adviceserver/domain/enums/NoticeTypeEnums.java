@@ -1,5 +1,6 @@
 package com.zyq.chirp.adviceserver.domain.enums;
 
-public enum WsActionEnum {
-    HEARTBEAT
+public enum NoticeTypeEnums {
+    USER,
+    SYSTEM
 }

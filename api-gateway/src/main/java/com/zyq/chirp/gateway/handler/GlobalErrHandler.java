@@ -35,7 +35,7 @@ public class GlobalErrHandler implements ErrorWebExceptionHandler {
         String message = ex.getMessage();
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
         if (ex instanceof NotLoginException || ex.getCause() instanceof NotLoginException) {
-            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            response.setStatusCode(HttpStatus.OK);
             result.setCode(HttpStatus.UNAUTHORIZED.value());
             message = "请先登录";
         } else {

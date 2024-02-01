@@ -27,13 +27,14 @@ public class ChatController {
         return ResponseEntity.ok(assemble.assemble(messages));
     }
 
-    @GetMapping("/history/page/{page}/{senderId}")
-    public ResponseEntity<List<ChatDto>> getChatHistory(@PathVariable("page") Integer page, @PathVariable("senderId") Long senderId) {
-        List<ChatDto> messageDtos = chatService.getChatHistory(StpUtil.getLoginIdAsLong(), senderId, page);
+    @GetMapping("/history/page/{page}/{conversation}")
+    public ResponseEntity<List<ChatDto>> getChatHistory(@PathVariable("page") Integer page,
+                                                        @PathVariable("conversation") String conversation,
+                                                        @RequestParam(defaultValue = "30") Integer size) {
+        List<ChatDto> messageDtos = chatService.getChatHistory(conversation, StpUtil.getLoginIdAsLong(), page, size);
         assemble.assemble(messageDtos);
         return ResponseEntity.ok(messageDtos);
     }
-
     @PostMapping("/unread/get")
     public ResponseEntity<Map<String, Integer>> getUnread(@RequestParam("conversations") List<String> conversations) {
         return ResponseEntity.ok(chatService.getUnreadCount(conversations, StpUtil.getLoginIdAsLong()));

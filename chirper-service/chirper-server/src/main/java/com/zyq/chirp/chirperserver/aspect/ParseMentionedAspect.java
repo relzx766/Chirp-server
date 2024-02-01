@@ -1,9 +1,6 @@
 package com.zyq.chirp.chirperserver.aspect;
 
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.EntityType;
-import com.zyq.chirp.adviceclient.enums.EventType;
-import com.zyq.chirp.adviceclient.enums.NoticeType;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.domain.enums.CacheKey;
 import com.zyq.chirp.common.domain.exception.ChirpException;
@@ -69,9 +66,6 @@ public class ParseMentionedAspect {
                     NotificationDto messageDto = NotificationDto.builder()
                             .senderId(chirperDto.getAuthorId())
                             .receiverId(id)
-                            .event(EventType.MENTIONED.name())
-                            .entityType(EntityType.CHIRPER.name())
-                            .noticeType(NoticeType.USER.name())
                             .sonEntity(chirperDto.getId().toString())
                             .build();
                     kafkaTemplate.send(mentionedTopic, messageDto);

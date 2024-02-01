@@ -22,6 +22,7 @@ public class Chat {
     Long receiverId;
     String conversationId;
     String content;
+    String iv;
     String type;
     Long referenceId;
     Timestamp createTime;

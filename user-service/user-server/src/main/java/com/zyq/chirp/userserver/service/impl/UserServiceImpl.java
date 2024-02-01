@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.sql.Timestamp;
 import java.util.*;
@@ -97,9 +98,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDto> getByIds(Collection<Long> userIds, Long currentUserId) {
-        if (userIds == null) {
-            throw new ChirpException(Code.ERR_BUSINESS, "对象用户为空");
-        } else if (userIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(userIds)) {
             throw new ChirpException(Code.ERR_BUSINESS, "对象用户为空");
         } else {
             Map<Long, Integer> relation = new HashMap<>();

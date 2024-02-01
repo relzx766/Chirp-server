@@ -1,15 +1,18 @@
 package com.zyq.chirp.adviceserver.mq.Assembler;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.NoticeType;
+import com.zyq.chirp.adviceserver.domain.enums.NoticeEntityTypeEnums;
+import com.zyq.chirp.adviceserver.domain.enums.NoticeEventTypeEnums;
+import com.zyq.chirp.adviceserver.domain.enums.NoticeStatusEnums;
+import com.zyq.chirp.adviceserver.domain.enums.NoticeTypeEnums;
 import com.zyq.chirp.chirpclient.client.ChirperClient;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
-import com.zyq.chirp.userclient.client.UserClient;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Component;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -32,44 +36,75 @@ public class ChirperMessageAssembler {
     @Resource
     ChirperClient chirperClient;
     @Resource
-    UserClient userClient;
-    @Resource
     KafkaTemplate<String, NotificationDto> kafkaTemplate;
     @Value("${mq.topic.site-message.notice}")
     String notice;
-    @Resource
-    ObjectMapper objectMapper;
+    @Value("${mq.topic.site-message.like}")
+    String likeTopic;
+    @Value("${mq.topic.site-message.forward}")
+    String forwardTopic;
+    @Value("${mq.topic.site-message.quote}")
+    String quoteTopic;
+    @Value("${mq.topic.site-message.reply}")
+    String replyTopic;
+    @Value("${mq.topic.site-message.mentioned}")
+    String mentionedTopic;
 
     @KafkaListener(topics = {"${mq.topic.site-message.like}", "${mq.topic.site-message.forward}",
             "${mq.topic.site-message.quote}", "${mq.topic.site-message.reply}", "${mq.topic.site-message.mentioned}"},
             groupId = "${mq.consumer.group.pre-interaction}",
             batch = "true", concurrency = "4")
-    public void receiver(@Payload List<NotificationDto> messageDtos, Acknowledgment ack) {
-        List<Long> chirperIds = messageDtos.stream().map(messageDto -> Long.parseLong(messageDto.getSonEntity())).toList();
-        if (!chirperIds.isEmpty()) {
-            Map<Long, ChirperDto> chirperDtoMap;
-            List<ChirperDto> chirperDtoList = chirperClient.getBasicInfo(chirperIds).getBody();
-            if (chirperDtoList != null && !chirperDtoList.isEmpty()) {
-                chirperDtoMap = chirperDtoList.stream()
-                        .collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
-                //转换为详细信息后发送
-                for (NotificationDto messageDto : messageDtos) {
-                    messageDto.setId(IdWorker.getId());
-                    if (messageDto.getReceiverId() == null) {
-                        Long receiver = chirperDtoMap.get(Long.parseLong(messageDto.getSonEntity())).getAuthorId();
-                        messageDto.setReceiverId(receiver);
+    public void receiver(@Payload List<ConsumerRecord<String, NotificationDto>> records, Acknowledgment ack) {
+        try {
+            List<Long> chirperIds = records.stream()
+                    .map(ConsumerRecord::value)
+                    .map(NotificationDto::getSonEntity)
+                    .map(Long::parseLong)
+                    .toList();
+            if (!chirperIds.isEmpty()) {
+                ResponseEntity<List<ChirperDto>> response = chirperClient.getBasicInfo(chirperIds);
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    Map<Long, ChirperDto> chirperDtoMap = Objects.requireNonNull(response.getBody())
+                            .stream().collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
+                    for (ConsumerRecord<String, NotificationDto> record : records) {
+                        String topic = record.topic();
+                        NotificationDto notificationDto = record.value();
+                        notificationDto.setId(IdWorker.getId());
+                        notificationDto.setEntityType(NoticeEntityTypeEnums.CHIRPER.name());
+                        notificationDto.setNoticeType(NoticeTypeEnums.USER.name());
+                        notificationDto.setStatus(NoticeStatusEnums.UNREAD.getStatus());
+                        notificationDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
+                        if (notificationDto.getReceiverId() == null) {
+                            ChirperDto chirperDto = chirperDtoMap.get(Long.parseLong(notificationDto.getSonEntity()));
+                            if (chirperDto == null || notificationDto.getSenderId().equals(chirperDto.getAuthorId())) {
+                                continue;
+                            } else {
+                                notificationDto.setReceiverId(chirperDto.getAuthorId());
+                            }
+                        }
+                        if (likeTopic.equalsIgnoreCase(topic)) {
+                            notificationDto.setEvent(NoticeEventTypeEnums.LIKE.name());
+                        } else if (forwardTopic.equalsIgnoreCase(topic)) {
+                            notificationDto.setEvent(NoticeEventTypeEnums.FORWARD.name());
+                        } else if (replyTopic.equalsIgnoreCase(topic)) {
+                            notificationDto.setEvent(NoticeEventTypeEnums.REPLY.name());
+                        } else if (quoteTopic.equalsIgnoreCase(topic)) {
+                            notificationDto.setEvent(NoticeEventTypeEnums.QUOTE.name());
+                        } else if (mentionedTopic.equalsIgnoreCase(topic)) {
+                            notificationDto.setEvent(NoticeEventTypeEnums.MENTIONED.name());
+                        }
+                        kafkaTemplate.send(notice, notificationDto);
                     }
-                    //过滤掉自己给自己的互动消息
-                    if (messageDto.getSenderId().equals(messageDto.getReceiverId())) {
-                        continue;
-                    }
-                    messageDto.setNoticeType(NoticeType.USER.name());
-                    messageDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
-                    kafkaTemplate.send(notice, messageDto);
+                } else if (response.getStatusCode().isError()) {
+                    log.error("组装推文互动消息时获取推文信息错误，组装失败=>{}", response);
                 }
             }
+        } catch (NumberFormatException e) {
+            log.error("组装推文互动消息失败，错误=>", e);
+        } finally {
+            ack.acknowledge();
         }
-        ack.acknowledge();
+
     }
 
 }

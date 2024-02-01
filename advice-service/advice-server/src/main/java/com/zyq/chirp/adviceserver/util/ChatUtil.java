@@ -27,4 +27,17 @@ public class ChatUtil {
         String[] member = splitConversation(conversation);
         return member[0].equals(member[1]);
     }
+
+    /**
+     * 话题参与者判断
+     *
+     * @param conversation 话题
+     * @param userId       用户
+     * @return 用户是否是该话题的参与者
+     */
+    public static boolean isParticipant(String conversation, Long userId) {
+        String[] participants = splitConversation(conversation);
+        String user = userId.toString();
+        return participants[0].equals(user) || participants[1].equals(user);
+    }
 }

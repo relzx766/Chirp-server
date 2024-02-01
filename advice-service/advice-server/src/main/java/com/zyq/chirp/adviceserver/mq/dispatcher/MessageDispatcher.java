@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.ChatDto;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.MessageTypeEnum;
+import com.zyq.chirp.adviceserver.domain.enums.MessageTypeEnums;
 import com.zyq.chirp.authclient.client.AuthClient;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ public class MessageDispatcher {
             onlineMap.forEach((userId, isOnline) -> {
                 if (isOnline) {
                     try {
-                        redisTemplate.convertAndSend(messageTopic + userId, Map.entry(MessageTypeEnum.NOTICE.name(), objectMapper.writeValueAsString(messageMap.get(userId))));
+                        redisTemplate.convertAndSend(messageTopic + userId, Map.entry(MessageTypeEnums.NOTICE.name(), objectMapper.writeValueAsString(messageMap.get(userId))));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
@@ -62,7 +62,7 @@ public class MessageDispatcher {
             onlineMap.forEach((userId, isOnline) -> {
                 if (isOnline) {
                     try {
-                        redisTemplate.convertAndSend(messageTopic + userId, Map.entry(MessageTypeEnum.CHAT.name(), objectMapper.writeValueAsString(messageMap.get(userId))));
+                        redisTemplate.convertAndSend(messageTopic + userId, Map.entry(MessageTypeEnums.CHAT.name(), objectMapper.writeValueAsString(messageMap.get(userId))));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }

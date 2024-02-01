@@ -1,6 +1,7 @@
 package com.zyq.chirp.adviceserver.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.zyq.chirp.adviceclient.dto.E2eeKeypairDto;
 import com.zyq.chirp.adviceserver.service.E2EEService;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +18,8 @@ public class E2EEController {
     E2EEService e2EEService;
 
     @GetMapping("/pair")
-    public ResponseEntity<String[]> getKeyPair() {
-        return ResponseEntity.ok(e2EEService.generateKeyPair());
+    public ResponseEntity<E2eeKeypairDto> getKeyPair() {
+        return ResponseEntity.ok(e2EEService.getKeypair());
     }
 
     @GetMapping("/key/{id}")

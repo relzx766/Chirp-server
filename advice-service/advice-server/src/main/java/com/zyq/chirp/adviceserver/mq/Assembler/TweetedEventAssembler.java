@@ -2,14 +2,15 @@ package com.zyq.chirp.adviceserver.mq.Assembler;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.EntityType;
-import com.zyq.chirp.adviceclient.enums.EventType;
-import com.zyq.chirp.adviceclient.enums.NoticeType;
+import com.zyq.chirp.adviceserver.domain.enums.NoticeEntityTypeEnums;
+import com.zyq.chirp.adviceserver.domain.enums.NoticeEventTypeEnums;
+import com.zyq.chirp.adviceserver.domain.enums.NoticeTypeEnums;
 import com.zyq.chirp.authclient.client.AuthClient;
 import com.zyq.chirp.common.mq.model.Message;
 import com.zyq.chirp.feedclient.dto.FeedDto;
 import com.zyq.chirp.userclient.client.UserClient;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -26,6 +27,7 @@ import java.util.Map;
  * 消费推文发布消息，组装为完整的推文发布事件，推送给登录用户
  */
 @Component
+@Slf4j
 public class TweetedEventAssembler {
     @Value("${default-config.follower-query-size}")
     Integer querySize;
@@ -63,10 +65,10 @@ public class TweetedEventAssembler {
                                             .receiverId(Long.parseLong(follower))
                                             .senderId(Long.parseLong(feedDto.getPublisher()))
                                             .sonEntity(feedDto.getContentId())
-                                            .entityType(EntityType.CHIRPER.name())
-                                            .event(EventType.TWEETED.name())
+                                            .entityType(NoticeEntityTypeEnums.CHIRPER.name())
+                                            .event(NoticeEventTypeEnums.TWEETED.name())
                                             .createTime(new Timestamp(System.currentTimeMillis()))
-                                            .noticeType(NoticeType.USER.name())
+                                            .noticeType(NoticeTypeEnums.SYSTEM.name())
                                             .build();
                                     kafkaTemplate.send(tweeted, messageDto);
                                 }
@@ -76,7 +78,7 @@ public class TweetedEventAssembler {
                 });
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("组装发推通知错误，错误=>", e);
         } finally {
             ack.acknowledge();
         }

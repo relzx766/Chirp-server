@@ -1,5 +1,6 @@
 package com.zyq.chirp.adviceserver.service.impl;
 
+import com.zyq.chirp.adviceclient.dto.E2eeKeypairDto;
 import com.zyq.chirp.adviceserver.service.E2EEService;
 import jakarta.annotation.Resource;
 import org.springframework.cache.annotation.CacheConfig;
@@ -22,8 +23,8 @@ public class E2EEServiceImpl implements E2EEService {
     RedisTemplate redisTemplate;
 
     @Override
-    public String[] generateKeyPair() {
-        return new String[]{PRIME, GENERATOR_NUM};
+    public E2eeKeypairDto getKeypair() {
+        return new E2eeKeypairDto(PRIME, GENERATOR_NUM);
     }
 
     @Override

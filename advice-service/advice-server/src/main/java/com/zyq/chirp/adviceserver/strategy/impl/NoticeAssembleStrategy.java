@@ -11,6 +11,7 @@ import com.zyq.chirp.common.domain.model.Code;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,7 @@ public class NoticeAssembleStrategy implements MessageAssembleStrategy<Notificat
 
     @Override
     public List<NotificationDto> assemble(List<NotificationDto> messages) {
-        if (messages != null && !messages.isEmpty()) {
+        if (!CollectionUtils.isEmpty(messages)) {
             Long receiverId = messages.getFirst().getReceiverId();
             CountDownLatch latch = new CountDownLatch(2);
             Thread.ofVirtual().start(() -> {

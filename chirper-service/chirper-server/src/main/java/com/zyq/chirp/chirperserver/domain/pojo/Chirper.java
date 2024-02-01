@@ -22,6 +22,7 @@ public class Chirper {
     private Long id;
     private Long authorId;
     private Long conversationId;
+    private Long communityId;
     private Long inReplyToUserId;
     private Long inReplyToChirperId;
     private Timestamp createTime;

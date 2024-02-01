@@ -1,6 +1,6 @@
-package com.zyq.chirp.adviceclient.enums;
+package com.zyq.chirp.adviceserver.domain.enums;
 
-public enum EventType {
+public enum NoticeEventTypeEnums {
     /**
      * 发布了新的推文，通知关注者
      */

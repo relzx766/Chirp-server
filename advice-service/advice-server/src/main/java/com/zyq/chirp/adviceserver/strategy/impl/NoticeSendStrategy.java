@@ -2,7 +2,7 @@ package com.zyq.chirp.adviceserver.strategy.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.MessageTypeEnum;
+import com.zyq.chirp.adviceserver.domain.enums.MessageTypeEnums;
 import com.zyq.chirp.adviceserver.exception.SendFailedException;
 import com.zyq.chirp.adviceserver.strategy.MessageAssembleStrategy;
 import com.zyq.chirp.adviceserver.strategy.MessageSendStrategy;
@@ -46,7 +46,7 @@ public class NoticeSendStrategy implements MessageSendStrategy<NotificationDto> 
         assembleStrategy.assemble(messageDtos);
         sessions.forEach(session -> {
             try {
-                session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnum.NOTICE.name(), messageDtos)));
+                session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnums.NOTICE.name(), messageDtos)));
             } catch (IOException e) {
                 throw new SendFailedException(e.getMessage(), e.getCause(), Code.ERR_SYSTEM.getCode(), messageDtos);
             }

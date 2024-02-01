@@ -6,9 +6,6 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.rholder.retry.RetryException;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.EntityType;
-import com.zyq.chirp.adviceclient.enums.EventType;
-import com.zyq.chirp.adviceclient.enums.NoticeType;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.aspect.ParseMentioned;
 import com.zyq.chirp.chirperserver.aspect.Statistic;
@@ -147,9 +144,6 @@ public class ChirperServiceImpl implements ChirperService {
         NotificationDto message = NotificationDto.builder()
                 .sonEntity(chirperDto.getInReplyToChirperId().toString())
                 .entity(chirper.getId().toString())
-                .event(EventType.REPLY.name())
-                .entityType(EntityType.CHIRPER.name())
-                .noticeType(NoticeType.USER.name())
                 .senderId(chirper.getAuthorId())
                 .build();
         kafkaTemplate.send(REPLY_MSG_TOPIC, message);
@@ -284,16 +278,11 @@ public class ChirperServiceImpl implements ChirperService {
                     System.currentTimeMillis()
             );
             kafkaTemplate.send(FORWARD_INCREMENT_COUNT_TOPIC, action);
-            Boolean absent = redisTemplate.opsForValue().setIfAbsent(STR."\{EventType.FORWARD.name()}:\{userId}:\{chirperId}", 1, Duration.ofHours(expire));
-            if (Boolean.TRUE.equals(absent)) {
                 NotificationDto messageDto = NotificationDto.builder()
                         .sonEntity(String.valueOf(chirperId))
-                        .entityType(EntityType.CHIRPER.name())
-                        .event(EventType.FORWARD.name())
                         .senderId(userId)
                         .build();
                 kafkaTemplate.send(FORWARD_MSG_TOPIC, messageDto);
-            }
         });
     }
 
@@ -355,7 +344,7 @@ public class ChirperServiceImpl implements ChirperService {
                 .eq(Chirper::getAuthorId, userId)
                 .eq(Chirper::getType, ChirperType.FORWARD.name())
                 .eq(Chirper::getStatus, ChirperStatus.ACTIVE.getStatus())
-                .ge(Chirper::getCreateTime, currentTimeMillis)
+                .ge(Chirper::getCreateTime, new Timestamp(currentTimeMillis))
                 .set(Chirper::getStatus, ChirperStatus.DELETE.getStatus())
                 .set(Chirper::getCreateTime, new Timestamp(currentTimeMillis))) > 0;
         if (isUpdate) {
@@ -450,9 +439,6 @@ public class ChirperServiceImpl implements ChirperService {
         NotificationDto messageDto = NotificationDto.builder()
                 .sonEntity(chirperDto.getReferencedChirperId().toString())
                 .entity(chirper.getId().toString())
-                .noticeType(NoticeType.USER.name())
-                .event(EventType.QUOTE.name())
-                .entityType(EntityType.CHIRPER.name())
                 .senderId(chirper.getAuthorId()).build();
         kafkaTemplate.send(QUOTE_MSG_TOPIC, messageDto);
         return chirperDto;

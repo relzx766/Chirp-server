@@ -1,4 +1,4 @@
-package com.zyq.chirp.authserver.pojo;
+package com.zyq.chirp.authserver.domain.pojo;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@TableName("tb_role")
-public class Role {
+@TableName("tb_permission")
+public class Permission {
     @TableId(type = IdType.AUTO)
     private Integer id;
-    private String name;
+    private String path;
     private String description;
 }

@@ -3,8 +3,6 @@ package com.zyq.chirp.chirperserver.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.EntityType;
-import com.zyq.chirp.adviceclient.enums.EventType;
 import com.zyq.chirp.chirpclient.dto.LikeDto;
 import com.zyq.chirp.chirperserver.aspect.Statistic;
 import com.zyq.chirp.chirperserver.domain.enums.ActionTypeEnums;
@@ -28,7 +26,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -86,16 +83,11 @@ public class LikeServiceImpl implements LikeService {
                     action.setOperation(DefaultOperation.INCREMENT.getOperation());
                     action.setActionTime(System.currentTimeMillis());
                     kafkaTemplate.send(LIKE_INCREMENT_COUNT_TOPIC, action);
-                    Boolean absent = redisTemplate.opsForValue().setIfAbsent(STR."\{EventType.LIKE.name()}:\{action.getOperator()}:\{action.getTarget()}", 1, Duration.ofHours(expire));
-                    if (Boolean.TRUE.equals(absent)) {
                         NotificationDto notificationDto = NotificationDto.builder()
                                 .sonEntity(String.valueOf(action.getTarget()))
-                                .event(EventType.LIKE.name())
-                                .entityType(EntityType.CHIRPER.name())
                                 .senderId(action.getOperator())
                                 .build();
                         kafkaTemplate.send(topic, notificationDto);
-                    }
                 });
             });
 

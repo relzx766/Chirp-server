@@ -107,8 +107,8 @@ public class ChirperController {
                                                     @Nullable @RequestParam("chirperId") Long chirperId,
                                                     @Nullable @RequestParam("userId") List<Long> userId,
                                                     @Nullable @RequestParam("type") String type,
-                                                    @Nullable @RequestParam("isMedia") Boolean isMedia) {
-        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, userId, ChirperType.find(type), isMedia, null);
+                                                    @Nullable @RequestParam("media") Boolean media) {
+        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, userId, ChirperType.find(type), media, null);
         if (StpUtil.isLogin()) {
             chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
         }

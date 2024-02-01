@@ -3,7 +3,7 @@ package com.zyq.chirp.adviceserver.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.ChatDto;
-import com.zyq.chirp.adviceclient.enums.MessageTypeEnum;
+import com.zyq.chirp.adviceserver.domain.enums.MessageTypeEnums;
 import com.zyq.chirp.adviceserver.domain.enums.WsActionEnum;
 import com.zyq.chirp.adviceserver.mq.dispatcher.MessageDispatcher;
 import com.zyq.chirp.adviceserver.service.ChatService;
@@ -86,9 +86,9 @@ public class WsController {
                 ChatDto chatDto = objectMapper.readValue(message, ChatDto.class);
                 chatDto.setSenderId(userId);
                 chatService.send(chatDto);
-                session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnum.CHAT.name(), List.of(chatDto))));
+                session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnums.CHAT.name(), List.of(chatDto))));
             } catch (JsonProcessingException e) {
-                e.printStackTrace();
+                log.error("", e);
                 throw new ChirpException(Code.ERR_BUSINESS, "json转化失败,请检查消息格式");
             }
 

@@ -24,6 +24,7 @@ public class ChatDto extends SiteMessage {
     private Long tempId;
     private String conversationId;
     private String content;
+    private String iv;
     private String type;
     private ChatDto reference;
     private Timestamp createTime;

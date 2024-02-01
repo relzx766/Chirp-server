@@ -2,6 +2,7 @@ package com.zyq.chirp.adviceserver.mq.consumer;
 
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
 import com.zyq.chirp.adviceserver.convertor.NoticeConvertor;
+import com.zyq.chirp.adviceserver.domain.enums.NoticeStatusEnums;
 import com.zyq.chirp.adviceserver.domain.pojo.Notification;
 import com.zyq.chirp.adviceserver.service.NotificationService;
 import jakarta.annotation.Resource;
@@ -35,8 +36,7 @@ public class NoticeConsumer {
         List<Notification> notifications = messageDtos.stream()
                 .map(messageDto -> {
                     Notification notification = noticeConvertor.dtoToPojo(messageDto);
-                    notification.setIsRead(false);
-                    notification.setStatus(true);
+                    notification.setStatus(NoticeStatusEnums.UNREAD.getStatus());
                     return notification;
                 })
                 .toList();

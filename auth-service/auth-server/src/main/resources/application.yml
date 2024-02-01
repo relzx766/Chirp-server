@@ -5,13 +5,13 @@ spring:
     name: auth-server
   cloud:
     nacos:
-      server-addr: 192.168.169.129:8846,192.168.169.129:8847,192.168.169.129:8848
+      server-addr: 192.168.0.14:8846,192.168.0.14:8847,192.168.0.14:8848
   config:
     import:
       - optional:nacos:auth-server-dev.yml
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.169.129:3306/db_chirp?userUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
+    url: jdbc:mysql://192.168.0.14:3306/db_chirp?userUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: root
     druid:
@@ -33,12 +33,12 @@ spring:
     redis:
       cluster:
         nodes:
-          - 192.168.169.129:6379
-          - 192.168.169.129:6380
-          - 192.168.169.129:6381
-          - 192.168.169.129:6382
-          - 192.168.169.129:6383
-          - 192.168.169.129:6384
+          - 192.168.0.14:6379
+          - 192.168.0.14:6380
+          - 192.168.0.14:6381
+          - 192.168.0.14:6382
+          - 192.168.0.14:6383
+          - 192.168.0.14:6384
         max-redirects: 3
       password: 1234
       timeout: 6000ms
@@ -49,7 +49,7 @@ spring:
           min-idle: 0
           max-wait: -1
   kafka:
-    bootstrap-servers: 192.168.169.129:19092
+    bootstrap-servers: 192.168.0.14:19092
     consumer:
       group-id: auth_consumer_group
       auto-offset-reset: earliest

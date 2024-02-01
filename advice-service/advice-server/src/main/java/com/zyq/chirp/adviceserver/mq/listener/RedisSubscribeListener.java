@@ -5,8 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.adviceclient.dto.ChatDto;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
-import com.zyq.chirp.adviceclient.enums.MessageTypeEnum;
 import com.zyq.chirp.adviceserver.config.SpringbootContext;
+import com.zyq.chirp.adviceserver.domain.enums.MessageTypeEnums;
 import com.zyq.chirp.adviceserver.strategy.impl.ChatSendStrategy;
 import com.zyq.chirp.adviceserver.strategy.impl.NoticeSendStrategy;
 import jakarta.validation.constraints.NotNull;
@@ -69,12 +69,12 @@ public class RedisSubscribeListener implements MessageListener {
                     List<ChatDto> chatDtos = new ArrayList<>();
                     map.forEach((type, siteMessageStr) -> {
                         try {
-                            if (MessageTypeEnum.CHAT.name().equals(type)) {
+                            if (MessageTypeEnums.CHAT.name().equals(type)) {
                                 List<ChatDto> chatDtoList = objectMapper.readValue(siteMessageStr, new TypeReference<List<ChatDto>>() {
                                 });
                                 chatDtos.addAll(chatDtoList);
                             }
-                            if (MessageTypeEnum.NOTICE.name().equals(type)) {
+                            if (MessageTypeEnums.NOTICE.name().equals(type)) {
                                 List<NotificationDto> notificationDtos = objectMapper.readValue(siteMessageStr, new TypeReference<List<NotificationDto>>() {
                                 });
                                 notice.addAll(notificationDtos);

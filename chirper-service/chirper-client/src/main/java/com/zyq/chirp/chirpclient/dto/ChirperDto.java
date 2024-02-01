@@ -28,6 +28,7 @@ public class ChirperDto {
     private String avatar;
     //--
     private Long conversationId;
+    private Long communityId;
     private Long inReplyToUserId;
     @NotNull(groups = Reply.class, message = "回复对象不能为空")
     private Long inReplyToChirperId;
