@@ -8,7 +8,6 @@
         <artifactId>chirp</artifactId>
         <version>1.0</version>
     </parent>
-    <groupId>com.zyq.chirp</groupId>
     <artifactId>advice-service</artifactId>
     <packaging>pom</packaging>
     <modules>

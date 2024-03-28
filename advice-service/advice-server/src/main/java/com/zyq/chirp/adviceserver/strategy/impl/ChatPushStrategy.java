@@ -1,7 +1,8 @@
 package com.zyq.chirp.adviceserver.strategy.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zyq.chirp.adviceclient.dto.NotificationDto;
+import com.zyq.chirp.adviceclient.dto.ChatDto;
+import com.zyq.chirp.adviceserver.domain.enums.ChatStatusEnum;
 import com.zyq.chirp.adviceserver.domain.enums.MessageTypeEnums;
 import com.zyq.chirp.adviceserver.exception.SendFailedException;
 import com.zyq.chirp.adviceserver.strategy.MessageAssembleStrategy;
@@ -10,7 +11,6 @@ import com.zyq.chirp.common.domain.model.Code;
 import jakarta.annotation.Resource;
 import jakarta.websocket.Session;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,38 +20,26 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class NoticeSendStrategy implements MessageSendStrategy<NotificationDto> {
-
+public class ChatPushStrategy implements MessageSendStrategy<ChatDto> {
     @Resource
     ObjectMapper objectMapper;
-
-
-    @Value("${mq.topic.site-message.interaction}")
-    String interaction;
-    @Value("${mq.consumer.group.user}")
-    String group;
-    @Value("${mq.topic.site-message.tweeted-advice}")
-    String tweeted;
     @Resource
-    MessageAssembleStrategy<NotificationDto> assembleStrategy;
+    private MessageAssembleStrategy<ChatDto> assembleStrategy;
 
-    /**
-     * 推送站内信
-     *
-     * @param messageDtos 站内信
-     * @param sessions    websocket session
-     */
-
-    public void send(List<NotificationDto> messageDtos, Collection<Session> sessions) {
+    @Override
+    public void send(List<ChatDto> messageDtos, Collection<Session> sessions) {
         assembleStrategy.assemble(messageDtos);
+        messageDtos.forEach(chatDto -> {
+            chatDto.setStatus(ChatStatusEnum.UNREAD.name());
+        });
         sessions.forEach(session -> {
             try {
-                session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnums.NOTICE.name(), messageDtos)));
+                if (session.isOpen()) {
+                    session.getAsyncRemote().sendText(objectMapper.writeValueAsString(Map.of(MessageTypeEnums.CHAT.name(), messageDtos)));
+                }
             } catch (IOException e) {
                 throw new SendFailedException(e.getMessage(), e.getCause(), Code.ERR_SYSTEM.getCode(), messageDtos);
             }
         });
-
     }
-
 }

@@ -5,7 +5,7 @@ spring:
     name: media-server
   cloud:
     nacos:
-      server-addr: 192.168.0.14:8846,192.168.0.14:8847,192.168.0.14:8848
+      server-addr: 192.168.31.14:8846,192.168.31.14:8847,192.168.31.14:8848
   config:
     import:
       - optional:nacos:mediaServer-dev.yml
@@ -19,7 +19,7 @@ spring:
       static-locations: file:D:\\Project\\static
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.0.14:3306/db_chirp?userUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
+    url: jdbc:mysql://192.168.31.14:3306/db_chirp?userUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: root
     druid:
@@ -41,12 +41,12 @@ spring:
     redis:
       cluster:
         nodes:
-          - 192.168.0.14:6379
-          - 192.168.0.14:6380
-          - 192.168.0.14:6381
-          - 192.168.0.14:6382
-          - 192.168.0.14:6383
-          - 192.168.0.14:6384
+          - 192.168.31.14:6379
+          - 192.168.31.14:6380
+          - 192.168.31.14:6381
+          - 192.168.31.14:6382
+          - 192.168.31.14:6383
+          - 192.168.31.14:6384
         max-redirects: 3
       password: 1234
       timeout: 6000ms
@@ -64,4 +64,12 @@ sa-token:
 default-config:
   file:
     upload:
-      url: http://192.168.0.3:8085/media/
+      url: http://win:8085/media/
+oss:
+  endpoint: http://centos:9000
+  access_key: read_write_chirp
+  secret_key: read_write_chirp
+  region: oss-chirp-cn-gd
+  bucket: chirp
+  role_arn: arn:aws:s3:::chirp/*
+  role_session_name: oss-session

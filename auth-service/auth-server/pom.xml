@@ -116,6 +116,11 @@
             <artifactId>druid-spring-boot-starter</artifactId>
             <version>1.2.16</version>
         </dependency>
+        <!--邮件-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
         <!-- mybatis-plus -->
         <dependency>
             <groupId>com.baomidou</groupId>

@@ -11,7 +11,6 @@ public interface UserService {
 
     boolean update(UserDto userDto);
 
-    UserDto getById(Long userId, Long currentUserId);
 
     List<UserDto> getByIds(Collection<Long> userIds, Long currentUserId);
 
@@ -23,9 +22,9 @@ public interface UserService {
 
     UserDto getDetailByUsername(String username);
 
-    boolean isExistByUsername(String username);
+    boolean isUnExist(String username);
 
-    boolean isExistByEmail(String email);
+    boolean isEmailExist(String email);
 
     List<UserDto> search(String keyword, Long currentUserId, Integer page);
 

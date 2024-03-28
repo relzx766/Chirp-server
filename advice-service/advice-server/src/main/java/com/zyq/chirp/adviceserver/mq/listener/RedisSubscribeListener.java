@@ -7,8 +7,8 @@ import com.zyq.chirp.adviceclient.dto.ChatDto;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
 import com.zyq.chirp.adviceserver.config.SpringbootContext;
 import com.zyq.chirp.adviceserver.domain.enums.MessageTypeEnums;
-import com.zyq.chirp.adviceserver.strategy.impl.ChatSendStrategy;
-import com.zyq.chirp.adviceserver.strategy.impl.NoticeSendStrategy;
+import com.zyq.chirp.adviceserver.strategy.impl.ChatPushStrategy;
+import com.zyq.chirp.adviceserver.strategy.impl.NoticePushStrategy;
 import jakarta.validation.constraints.NotNull;
 import jakarta.websocket.Session;
 import lombok.extern.slf4j.Slf4j;
@@ -26,15 +26,15 @@ import java.util.Map;
 @Slf4j
 public class RedisSubscribeListener implements MessageListener {
     private final Map<String, Session> sessionMap = new HashMap<>();
-    NoticeSendStrategy noticeSendStrategy;
+    NoticePushStrategy noticePushStrategy;
     RedisTemplate redisTemplate;
     ObjectMapper objectMapper;
-    ChatSendStrategy chatSendStrategy;
+    ChatPushStrategy chatPushStrategy;
 
     public RedisSubscribeListener(Session session) {
         ApplicationContext context = SpringbootContext.getContext();
-        noticeSendStrategy = context.getBean(NoticeSendStrategy.class);
-        chatSendStrategy = context.getBean(ChatSendStrategy.class);
+        noticePushStrategy = context.getBean(NoticePushStrategy.class);
+        chatPushStrategy = context.getBean(ChatPushStrategy.class);
         objectMapper = context.getBean(ObjectMapper.class);
         redisTemplate = (RedisTemplate) context.getBean("redisTemplate");
         this.sessionMap.put(session.getId(), session);
@@ -43,7 +43,7 @@ public class RedisSubscribeListener implements MessageListener {
 
     public RedisSubscribeListener() {
         ApplicationContext context = SpringbootContext.getContext();
-        noticeSendStrategy = context.getBean(NoticeSendStrategy.class);
+        noticePushStrategy = context.getBean(NoticePushStrategy.class);
         redisTemplate = (RedisTemplate) context.getBean("redisTemplate");
     }
 
@@ -63,19 +63,19 @@ public class RedisSubscribeListener implements MessageListener {
         sessionMap.forEach((sessionId, session) -> {
             if (session != null && session.isOpen()) {
                 try {
-                    Map<String, String> map = objectMapper.readValue(message.getBody(), new TypeReference<Map<String, String>>() {
+                    Map<String, String> map = objectMapper.readValue(message.getBody(), new TypeReference<>() {
                     });
                     List<NotificationDto> notice = new ArrayList<>();
                     List<ChatDto> chatDtos = new ArrayList<>();
                     map.forEach((type, siteMessageStr) -> {
                         try {
                             if (MessageTypeEnums.CHAT.name().equals(type)) {
-                                List<ChatDto> chatDtoList = objectMapper.readValue(siteMessageStr, new TypeReference<List<ChatDto>>() {
+                                List<ChatDto> chatDtoList = objectMapper.readValue(siteMessageStr, new TypeReference<>() {
                                 });
                                 chatDtos.addAll(chatDtoList);
                             }
                             if (MessageTypeEnums.NOTICE.name().equals(type)) {
-                                List<NotificationDto> notificationDtos = objectMapper.readValue(siteMessageStr, new TypeReference<List<NotificationDto>>() {
+                                List<NotificationDto> notificationDtos = objectMapper.readValue(siteMessageStr, new TypeReference<>() {
                                 });
                                 notice.addAll(notificationDtos);
                             }
@@ -85,10 +85,10 @@ public class RedisSubscribeListener implements MessageListener {
 
                     });
                     if (!notice.isEmpty()) {
-                        noticeSendStrategy.send(notice, List.of(session));
+                        noticePushStrategy.send(notice, List.of(session));
                     }
                     if (!chatDtos.isEmpty()) {
-                        chatSendStrategy.send(chatDtos, List.of(session));
+                        chatPushStrategy.send(chatDtos, List.of(session));
                     }
                 } catch (Exception e) {
                     log.info("", e);

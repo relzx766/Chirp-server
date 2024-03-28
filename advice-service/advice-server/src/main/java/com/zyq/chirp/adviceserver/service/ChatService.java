@@ -15,9 +15,7 @@ public interface ChatService {
 
     void add(ChatDto chatDto);
 
-    void connect(Long userId, Session session);
 
-    void disconnect(Long userId, Session session);
 
     void addBatch(Collection<ChatDto> chatDtos);
 

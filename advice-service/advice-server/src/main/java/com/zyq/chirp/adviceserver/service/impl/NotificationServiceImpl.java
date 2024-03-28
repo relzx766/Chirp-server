@@ -9,15 +9,23 @@ import com.zyq.chirp.adviceserver.domain.enums.NoticeStatusEnums;
 import com.zyq.chirp.adviceserver.domain.pojo.Notification;
 import com.zyq.chirp.adviceserver.mapper.NotificationMapper;
 import com.zyq.chirp.adviceserver.service.NotificationService;
+import com.zyq.chirp.common.domain.exception.ChirpException;
+import com.zyq.chirp.common.domain.model.Code;
+import com.zyq.chirp.common.util.StringUtil;
+import com.zyq.chirp.userclient.client.UserClient;
+import com.zyq.chirp.userclient.dto.RelationDto;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class NotificationServiceImpl implements NotificationService {
     @Resource
     NotificationMapper notificationMapper;
@@ -26,29 +34,42 @@ public class NotificationServiceImpl implements NotificationService {
     @Value("${default-config.page-size}")
     Integer pageSize;
     @Resource
-    KafkaProperties kafkaProperties;
+    UserClient userClient;
     @Value("${mq.topic.site-message.notice}")
     String notice;
 
 
-    /**
-     * id由上游mq生成
-     *
-     * @param notification
-     */
-    @Override
-    public void save(Notification notification) {
-        notificationMapper.insert(notification);
-    }
 
     /**
      * id由上游mq生成
      *
-     * @param notifications
      */
     @Override
     public void saveBatch(Collection<Notification> notifications) {
         notificationMapper.insertBatch(notifications);
+    }
+
+    @Override
+    public List<NotificationDto> getSendable(Collection<NotificationDto> notificationDtos) {
+        try {
+            if (!CollectionUtils.isEmpty(notificationDtos)) {
+                Set<String> fromAndToStrList = notificationDtos.stream().map(notificationDto -> StringUtil.combineKey(notificationDto.getSenderId(), notificationDto.getReceiverId())).collect(Collectors.toSet());
+                Map<String, RelationDto> relationDtoMap = userClient.getRelation(fromAndToStrList).getBody();
+                if (!CollectionUtils.isEmpty(relationDtoMap)) {
+                    return notificationDtos.stream().peek(notificationDto -> {
+                        RelationDto relationDto = relationDtoMap.get(StringUtil.combineKey(notificationDto.getSenderId(), notificationDto.getReceiverId()));
+                        if (relationDto.getIsBlock()) {
+                            notificationDto.setStatus(NoticeStatusEnums.UNREACHABLE.getStatus());
+                        }
+                    }).toList();
+                }
+                return notificationDtos.stream().toList();
+            }
+            return List.of();
+        } catch (Exception e) {
+            log.error("", e);
+            throw new ChirpException(Code.ERR_SYSTEM, e);
+        }
     }
 
 
@@ -58,7 +79,8 @@ public class NotificationServiceImpl implements NotificationService {
         searchPage.setSearchCount(false);
         Page<Notification> notice = notificationMapper.selectPage(searchPage, new LambdaQueryWrapper<Notification>()
                 .eq(Notification::getReceiverId, receiverId)
-                .orderByDesc(Notification::getCreateTime));
+                .orderByDesc(Notification::getCreateTime)
+                .in(Notification::getStatus, NoticeStatusEnums.READ.getStatus(), NoticeStatusEnums.UNREAD.getStatus()));
         if (!notice.getRecords().isEmpty()) {
             return notice.getRecords().stream()
                     .map(notification -> noticeConvertor.pojoToDto(notification))

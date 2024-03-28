@@ -22,4 +22,16 @@ public enum RelationType {
     public int getRelation() {
         return relation;
     }
+
+    public static int findWithDefault(Integer code) {
+        if (code == null) {
+            return UNFOLLOWED.relation;
+        }
+        for (RelationType type : RelationType.values()) {
+            if (type.getRelation() == code) {
+                return type.relation;
+            }
+        }
+        return UNFOLLOWED.relation;
+    }
 }

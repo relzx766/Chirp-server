@@ -29,7 +29,7 @@ public class ChatSettingServiceImpl implements ChatSettingService {
     E2EEService e2EEService;
     @Resource
     ChatConvertor chatConvertor;
-
+    String pinnedMapping = "typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler";
 
     @Override
     public void initOne(Long userId) {
@@ -118,9 +118,9 @@ public class ChatSettingServiceImpl implements ChatSettingService {
 
     @Override
     @CacheEvict(key = "#userId")
-    public void updatePinned(Long userId, String conversationId) {
+    public void updatePinned(Long userId, List<String> conversations) {
         settingMapper.update(null, new LambdaUpdateWrapper<ChatSetting>()
-                .set(ChatSetting::getPinned, conversationId)
+                .set(ChatSetting::getPinned, conversations, pinnedMapping)
                 .eq(ChatSetting::getUserId, userId));
     }
 }

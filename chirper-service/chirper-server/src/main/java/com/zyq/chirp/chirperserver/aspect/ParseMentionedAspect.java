@@ -3,6 +3,8 @@ package com.zyq.chirp.chirperserver.aspect;
 import com.zyq.chirp.adviceclient.dto.NotificationDto;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import com.zyq.chirp.chirperserver.domain.enums.CacheKey;
+import com.zyq.chirp.chirperserver.domain.enums.ChirperStatus;
+import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
 import com.zyq.chirp.common.domain.exception.ChirpException;
 import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.common.mq.model.Message;

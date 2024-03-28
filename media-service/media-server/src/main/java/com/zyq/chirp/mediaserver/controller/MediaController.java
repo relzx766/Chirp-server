@@ -2,6 +2,7 @@ package com.zyq.chirp.mediaserver.controller;
 
 import com.zyq.chirp.common.domain.exception.ChirpException;
 import com.zyq.chirp.common.domain.model.Code;
+import com.zyq.chirp.mediaclient.dto.ChunkUploadReqDto;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
 import com.zyq.chirp.mediaserver.service.MediaService;
 import com.zyq.chirp.mediaserver.util.FileUtil;
@@ -22,15 +23,8 @@ public class MediaController {
     MediaService mediaService;
 
     @PostMapping("/upload")
-    public ResponseEntity<MediaDto> upload(@RequestParam("file") MultipartFile file, @RequestParam("hash") String hash) {
-        MediaDto mediaDto = new MediaDto();
-        mediaDto.setMd5(hash);
-        mediaDto.setExtension(FileUtil.getExtension(file.getOriginalFilename()));
-        try {
-            return ResponseEntity.ok(mediaService.saveFile(file.getBytes(), mediaDto));
-        } catch (IOException e) {
-            throw new ChirpException(Code.ERR_BUSINESS, e);
-        }
+    public ResponseEntity<MediaDto> upload(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(mediaService.saveFile(file));
     }
 
     @PostMapping("/fast")
@@ -39,6 +33,23 @@ public class MediaController {
         return mediaDto != null ? ResponseEntity.ok(mediaDto) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
+    @PostMapping("/upload/chunk/init")
+    public ResponseEntity<ChunkUploadReqDto> initChunk(@RequestParam("size") Integer size) {
+        return ResponseEntity.ok(mediaService.initChunkUpload(size));
+    }
+
+    @PostMapping("/upload/chunk")
+    public ResponseEntity<Void> chunkUpload(@RequestParam("file") MultipartFile file,
+                                            @RequestParam("uploadId") String uploadId,
+                                            @RequestParam("index") Integer index) {
+        mediaService.uploadChunk(uploadId, index, file);
+        return ResponseEntity.ok(null);
+    }
+
+    @PostMapping("/upload/chunk/merge")
+    public ResponseEntity<MediaDto> mergeChunk(@RequestBody ChunkUploadReqDto chunkUploadReqDto) {
+        return ResponseEntity.ok(mediaService.mergeFile(chunkUploadReqDto));
+    }
     @PostMapping("/upload/slice")
     public ResponseEntity<MediaDto> uploadSlice(@RequestParam("file") MultipartFile file,
                                                 @RequestParam("hash") String hash,
@@ -50,16 +61,9 @@ public class MediaController {
             throw new ChirpException(Code.ERR_SYSTEM, "上传失败");
         }
     }
-
-    @PostMapping("/merge")
-    public ResponseEntity<MediaDto> merge(@RequestBody MediaDto mediaDto) {
-        MediaDto file = mediaService.mergeFile(mediaDto);
-        return ResponseEntity.ok(file);
-    }
-
     @PostMapping("/url/get")
     public ResponseEntity<List<MediaDto>> getUrl(@RequestParam("id") List<Integer> id) {
-        return ResponseEntity.ok(mediaService.getUrlById(id));
+        return ResponseEntity.ok(mediaService.getById(id));
     }
 
     @PostMapping("/combine/get")

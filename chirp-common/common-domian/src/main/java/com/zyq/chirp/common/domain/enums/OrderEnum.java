@@ -14,4 +14,12 @@ public enum OrderEnum {
         }
         return OrderEnum.DESC;
     }
+
+    public static boolean isAsc(OrderEnum orderEnum) {
+        return orderEnum.equals(ASC);
+    }
+
+    public static boolean isAsc(String order) {
+        return findAndDefault(order).equals(ASC);
+    }
 }

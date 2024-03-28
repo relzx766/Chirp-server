@@ -40,9 +40,14 @@ public class UserController {
         return ResponseEntity.ok(true);
     }
 
+    @PostMapping("/pwd/update")
+    public ResponseEntity<Boolean> updatePwd(@RequestBody UserDto userDto) {
+        userService.update(userDto);
+        return ResponseEntity.ok(true);
+    }
     @GetMapping("/load")
     public ResponseEntity<UserDto> loadUser() {
-        return ResponseEntity.ok(userService.getById(StpUtil.getLoginIdAsLong(), null));
+        return ResponseEntity.ok(userService.getByIds(List.of(StpUtil.getLoginIdAsLong()), null).getFirst());
     }
 
     @GetMapping("/profile/{username}")
@@ -114,12 +119,12 @@ public class UserController {
 
     @GetMapping("/username/check/{username}")
     public ResponseEntity<Boolean> checkUsername(@PathVariable("username") String username) {
-        return ResponseEntity.ok(userService.isExistByUsername(username));
+        return ResponseEntity.ok(userService.isUnExist(username));
     }
 
     @GetMapping("/email/check/{email}")
     public ResponseEntity<Boolean> checkEmail(@PathVariable("email") String email) {
-        return ResponseEntity.ok(userService.isExistByEmail(email));
+        return ResponseEntity.ok(userService.isEmailExist(email));
     }
 
     @PostMapping("/basic_info/rela")

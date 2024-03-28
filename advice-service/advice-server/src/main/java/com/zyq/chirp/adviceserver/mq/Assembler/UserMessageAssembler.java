@@ -6,6 +6,7 @@ import com.zyq.chirp.adviceserver.domain.enums.NoticeEntityTypeEnums;
 import com.zyq.chirp.adviceserver.domain.enums.NoticeEventTypeEnums;
 import com.zyq.chirp.adviceserver.domain.enums.NoticeStatusEnums;
 import com.zyq.chirp.adviceserver.domain.enums.NoticeTypeEnums;
+import com.zyq.chirp.adviceserver.service.NotificationService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -17,6 +18,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -28,23 +30,38 @@ public class UserMessageAssembler {
     String notice;
     @Value("${mq.topic.site-message.follow}")
     String followTopic;
+    @Resource
+    NotificationService notificationService;
     @KafkaListener(topics = "${mq.topic.site-message.follow}",
             groupId = "${mq.consumer.group.pre-interaction}",
             batch = "true")
     public void receiver(@Payload List<ConsumerRecord<String, NotificationDto>> records, Acknowledgment ack) {
-        for (ConsumerRecord<String, NotificationDto> record : records) {
-            String topic = record.topic();
-            NotificationDto notificationDto = record.value();
-            notificationDto.setId(IdWorker.getId());
-            notificationDto.setNoticeType(NoticeTypeEnums.USER.name());
-            notificationDto.setEntityType(NoticeEntityTypeEnums.USER.name());
-            notificationDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
-            notificationDto.setStatus(NoticeStatusEnums.UNREAD.getStatus());
-            if (followTopic.equalsIgnoreCase(topic)) {
-                notificationDto.setEvent(NoticeEventTypeEnums.FOLLOW.name());
+        try {
+            List<NotificationDto> notificationDtos = new ArrayList<>();
+            for (ConsumerRecord<String, NotificationDto> record : records) {
+                String topic = record.topic();
+                NotificationDto notificationDto = record.value();
+                notificationDto.setId(IdWorker.getId());
+                notificationDto.setNoticeType(NoticeTypeEnums.USER.name());
+                notificationDto.setEntityType(NoticeEntityTypeEnums.USER.name());
+                notificationDto.setCreateTime(new Timestamp(System.currentTimeMillis()));
+                notificationDto.setStatus(NoticeStatusEnums.UNREAD.getStatus());
+                if (followTopic.equalsIgnoreCase(topic)) {
+                    notificationDto.setEvent(NoticeEventTypeEnums.FOLLOW.name());
+                }
+                notificationDtos.add(notificationDto);
             }
-            kafkaTemplate.send(notice, notificationDto);
+            notificationDtos = notificationService.getSendable(notificationDtos);
+            for (NotificationDto notificationDto : notificationDtos) {
+                if (NoticeStatusEnums.UNREACHABLE.getStatus() != notificationDto.getStatus()) {
+                    kafkaTemplate.send(notice, notificationDto);
+                }
+            }
+        } catch (Exception e) {
+            log.error("组装用户互动消息失败，错误=>", e);
+        } finally {
+            ack.acknowledge();
         }
-        ack.acknowledge();
+
     }
 }

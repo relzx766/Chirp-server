@@ -1,0 +1,22 @@
+package com.zyq.chirp.communityclient.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.sql.Timestamp;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class MemberDto {
+    Long communityId;
+    Long userId;
+    /**
+     * 身份
+     */
+    Integer role;
+    Timestamp createTime;
+}

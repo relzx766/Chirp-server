@@ -1,6 +1,8 @@
 package com.zyq.chirp.mediaserver.service;
 
+import com.zyq.chirp.mediaclient.dto.ChunkUploadReqDto;
 import com.zyq.chirp.mediaclient.dto.MediaDto;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -17,7 +19,6 @@ public interface MediaService {
      */
     Map<Long, List<MediaDto>> getByMap(Map<Long, List<Integer>> map);
 
-    MediaDto getUrlById(Integer id);
 
     List<MediaDto> getUrlById(List<Integer> id);
 
@@ -34,10 +35,20 @@ public interface MediaService {
 
     MediaDto save(MediaDto mediaDto);
 
+    MediaDto saveFile(MultipartFile file);
+
+    ChunkUploadReqDto initChunkUpload(int chunkSize);
+
+    void uploadChunk(String uploadId, int index, MultipartFile file);
+
+    String chunkHashCache(String uploadId, int index, MultipartFile file);
+
+    MediaDto mergeFile(ChunkUploadReqDto reqDto);
+
     MediaDto saveFile(byte[] file, MediaDto mediaDto);
 
     void saveSlice(byte[] file, String hash, String filename, Integer seq);
 
-    MediaDto mergeFile(MediaDto mediaDto);
+    /*  MediaDto mergeFile(MediaDto mediaDto);*/
 
 }

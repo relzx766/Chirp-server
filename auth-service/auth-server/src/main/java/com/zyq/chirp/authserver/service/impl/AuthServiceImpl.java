@@ -2,6 +2,7 @@ package com.zyq.chirp.authserver.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.zyq.chirp.authclient.dto.AuthDto;
+import com.zyq.chirp.authclient.dto.PasswordResetDto;
 import com.zyq.chirp.authserver.domain.enums.AccountTypeEnum;
 import com.zyq.chirp.authserver.domain.enums.CacheKey;
 import com.zyq.chirp.authserver.service.AuthService;
@@ -10,6 +11,7 @@ import com.zyq.chirp.common.domain.model.Code;
 import com.zyq.chirp.userclient.client.UserClient;
 import com.zyq.chirp.userclient.dto.UserDto;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class AuthServiceImpl implements AuthService {
     @Resource
     RedisTemplate<String, Object> redisTemplate;
@@ -57,6 +60,23 @@ public class AuthServiceImpl implements AuthService {
             return AuthDto.builder().account(userDto.getUsername()).build();
         }
         throw new ChirpException(Code.ERR_BUSINESS, "注册失败");
+    }
+
+    @Override
+    public AuthDto resetPwd(PasswordResetDto resetDto) {
+        try {
+            long userId = StpUtil.getLoginIdAsLong();
+            UserDto userDto = userClient.getDetailById(userId).getBody();
+            assert userDto != null;
+            if (userDto.getPassword().equals(resetDto.getCurrentOne())) {
+                Boolean success = userClient.updatePwd(UserDto.builder().id(userId).password(resetDto.getNewOne()).build()).getBody();
+                assert Boolean.TRUE.equals(success);
+                return AuthDto.builder().account(userDto.getUsername()).password(resetDto.getNewOne()).accountType(AccountTypeEnum.USERNAME.name()).build();
+            }
+        } catch (Exception e) {
+            throw new ChirpException(Code.ERR_BUSINESS, "修改密码失败");
+        }
+        throw new ChirpException(Code.ERR_BUSINESS, "旧密码错误");
     }
 
     @Override

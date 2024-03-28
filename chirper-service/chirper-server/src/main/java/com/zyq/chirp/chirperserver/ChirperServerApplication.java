@@ -1,5 +1,6 @@
 package com.zyq.chirp.chirperserver;
 
+import com.zyq.chirp.communityclient.client.CommunityClient;
 import com.zyq.chirp.mediaclient.client.MediaClient;
 import com.zyq.chirp.userclient.client.UserClient;
 import org.mybatis.spring.annotation.MapperScan;
@@ -25,7 +26,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @EnableAspectJAutoProxy
 @MapperScan("com.zyq.chirp.chirperserver.mapper")
-@EnableFeignClients(basePackageClasses = {MediaClient.class, UserClient.class})
+@EnableFeignClients(basePackageClasses = {MediaClient.class, UserClient.class, CommunityClient.class})
 public class ChirperServerApplication {
     public static void main(String[] args) {
         SpringApplication.run(ChirperServerApplication.class, args);

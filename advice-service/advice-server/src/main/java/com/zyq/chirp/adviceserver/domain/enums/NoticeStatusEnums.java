@@ -8,6 +8,7 @@ import lombok.Getter;
 public enum NoticeStatusEnums {
     UNREAD(1),
     READ(2),
-    DELETE(3);
+    DELETE(3),
+    UNREACHABLE(4);;
     private final int status;
 }

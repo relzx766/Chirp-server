@@ -43,7 +43,7 @@ public class E2EEServiceImpl implements E2EEService {
     @Override
     public Map<Long, String> getPublicKey(List<Long> ids) {
         if (ids != null && !ids.isEmpty()) {
-            List<String> strIds = ids.stream().map(id -> STR. "e2ee:key:public:\{ id }" ).toList();
+            List<String> strIds = ids.stream().map(id -> STR."e2ee:key:public:\{id}").toList();
             List<String> values = redisTemplate.opsForValue().multiGet(strIds);
             Map<Long, String> map = new HashMap<>();
             if (values != null) {

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -38,8 +39,8 @@ public class ChatSettingController {
     }
 
     @PostMapping("/pinned")
-    public ResponseEntity<Boolean> updatePinned(@RequestParam("conversation") String conversation) {
-        service.updatePinned(StpUtil.getLoginIdAsLong(), conversation);
+    public ResponseEntity<Boolean> updatePinned(@RequestBody List<String> conversations) {
+        service.updatePinned(StpUtil.getLoginIdAsLong(), conversations);
         return ResponseEntity.ok(true);
     }
 }

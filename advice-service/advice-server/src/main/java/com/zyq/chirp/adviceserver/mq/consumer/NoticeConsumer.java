@@ -32,17 +32,19 @@ public class NoticeConsumer {
             groupId = "${mq.consumer.group.interaction}",
             batch = "true", concurrency = "4")
     public void receiver(@Payload List<NotificationDto> messageDtos, Acknowledgment ack) {
-        log.info("消费到通知，开始准备写入数据库");
-        List<Notification> notifications = messageDtos.stream()
-                .map(messageDto -> {
-                    Notification notification = noticeConvertor.dtoToPojo(messageDto);
-                    notification.setStatus(NoticeStatusEnums.UNREAD.getStatus());
-                    return notification;
-                })
-                .toList();
-        notificationService.saveBatch(notifications);
-        log.info("写入完成，开始提交偏移量");
-        ack.acknowledge();
-        log.info("偏移量提交完成");
+        try {
+            List<Notification> notifications = messageDtos.stream()
+                    .map(messageDto -> {
+                        Notification notification = noticeConvertor.dtoToPojo(messageDto);
+                        notification.setStatus(NoticeStatusEnums.UNREAD.getStatus());
+                        return notification;
+                    })
+                    .toList();
+            notificationService.saveBatch(notifications);
+        } catch (Exception e) {
+            log.error("写入通知失败,错误=>", e);
+        } finally {
+            ack.acknowledge();
+        }
     }
 }

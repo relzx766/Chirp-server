@@ -5,13 +5,14 @@ import com.zyq.chirp.adviceserver.domain.pojo.Notification;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface NotificationService {
-    void save(Notification notification);
 
     void saveBatch(Collection<Notification> notifications);
 
 
+    List<NotificationDto> getSendable(Collection<NotificationDto> notificationDtos);
 
     List<NotificationDto> getPageByReceiverId(Integer page, Long receiverId);
 

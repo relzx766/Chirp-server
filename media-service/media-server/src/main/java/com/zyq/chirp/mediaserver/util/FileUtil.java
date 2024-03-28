@@ -11,12 +11,16 @@ import org.apache.tika.detect.Detector;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
+import org.springframework.util.DigestUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Slf4j
@@ -70,4 +74,11 @@ public class FileUtil {
                 MediaDataEnums.HEIGHT.name(), image.getHeight());
     }
 
+    public static String generateDirname() {
+        return LocalDate.now().toString();
+    }
+
+    public static String getName(File file) {
+        return file.getName().substring(0, file.getName().lastIndexOf("."));
+    }
 }

@@ -41,7 +41,7 @@ public class ChirperDto {
     @NotNull(groups = Quote.class, message = "引用对象不能为空")
     private Long referencedChirperId;
     private ChirperDto referenced;
-    @Size(max = 9, message = "最多支持9个媒体文件")
+    @Size(max = 4, message = "最多支持4个媒体文件")
     private List<MediaDto> mediaKeys;
     private Integer viewCount;
     private Integer likeCount;
@@ -52,7 +52,10 @@ public class ChirperDto {
     private Boolean isForward;
     private Boolean isQuote;
     private Integer replyRange;
-    private Boolean replyable;
+    private Boolean replyable = false;
+    private Boolean forwardable = false;
+    private Boolean quotable = false;
+    private Boolean likeable = false;
     private Integer status;
 
     public ChirperDto() {
@@ -76,5 +79,19 @@ public class ChirperDto {
     @JsonIgnore
     public boolean isEmpty() {
         return (text == null || text.trim().isEmpty()) && (mediaKeys == null || mediaKeys.isEmpty());
+    }
+
+    public void setAllInteractionAllow() {
+        this.setReplyable(true);
+        this.setLikeable(true);
+        this.setQuotable(true);
+        this.setForwardable(true);
+    }
+
+    public void setAllInteractionDeny() {
+        this.setReplyable(false);
+        this.setLikeable(false);
+        this.setQuotable(false);
+        this.setForwardable(false);
     }
 }

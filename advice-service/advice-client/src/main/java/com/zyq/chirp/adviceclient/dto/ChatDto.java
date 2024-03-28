@@ -23,6 +23,9 @@ public class ChatDto extends SiteMessage {
      */
     private Long tempId;
     private String conversationId;
+    /**
+     * 明文的最大长度为1000，密文为1048576，即1M
+     */
     private String content;
     private String iv;
     private String type;

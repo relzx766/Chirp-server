@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -16,6 +17,7 @@ import java.sql.Timestamp;
 @NoArgsConstructor
 @TableName("tb_user")
 public class User implements Serializable {
+    @Serial
     private static final long serialVersionUID = 123451111L;
 
     @TableId(value = "id", type = IdType.AUTO)

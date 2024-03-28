@@ -15,7 +15,6 @@ public interface ChirperConvertor {
     Chirper dtoToPojo(ChirperDto chirperDto);
 
     @Mapping(target = "mediaKeys", source = "mediaKeys", qualifiedByName = "mediaConvertor")
-
     ChirperDto pojoToDto(Chirper chirper);
 
     @Named("mediaId")

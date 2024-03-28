@@ -3,6 +3,7 @@ package com.zyq.chirp.authserver.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.zyq.chirp.authclient.dto.AuthDto;
+import com.zyq.chirp.authclient.dto.PasswordResetDto;
 import com.zyq.chirp.authserver.service.AuthService;
 import com.zyq.chirp.userclient.client.UserClient;
 import com.zyq.chirp.userclient.dto.UserDto;
@@ -35,6 +36,12 @@ public class AuthController {
     @RequestMapping("/signOut")
     public void signOut() {
         StpUtil.logout();
+    }
+
+    @PostMapping("/pwd/reset")
+    public ResponseEntity<AuthDto> passwordReset(@RequestBody PasswordResetDto resetDto) {
+        authService.resetPwd(resetDto);
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping("/online")

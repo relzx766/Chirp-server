@@ -83,7 +83,11 @@
             <groupId>com.zyq.chirp</groupId>
             <artifactId>user-client</artifactId>
             <version>1.0</version>
-
+        </dependency>
+        <dependency>
+            <groupId>com.zyq.chirp</groupId>
+            <artifactId>community-client</artifactId>
+            <version>1.0</version>
         </dependency>
         <!-- Sa-Token 权限认证，在线文档：https://sa-token.cc -->
         <dependency>

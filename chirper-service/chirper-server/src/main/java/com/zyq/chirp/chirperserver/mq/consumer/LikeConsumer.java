@@ -29,18 +29,24 @@ public class LikeConsumer {
             groupId = "${mq.consumer.group.like}",
             batch = "true", concurrency = "4")
     public void likeRecordConsumer(@Payload List<Action<Long, Long>> actions, Acknowledgment ack) {
-        log.info("消费到主题:{}", LIKE_RECORD_TOPIC);
-        Map<String, List<Action<Long, Long>>> collect = actions.stream().collect(Collectors.groupingBy(Action::getOperation));
-        collect.forEach((operation, actionList) -> {
-            if (DefaultOperation.INSET.getOperation().equals(operation)) {
-                likeService.saveLike(actionList);
-            }
-            if (DefaultOperation.DELETE.getOperation().equals(operation)) {
-                likeService.saveLikeCancel(actionList);
-            }
-        });
-        ack.acknowledge();
-        log.info("主题:#{}偏移量提交", LIKE_RECORD_TOPIC);
+        try {
+            log.info("消费到主题:{}", LIKE_RECORD_TOPIC);
+            Map<String, List<Action<Long, Long>>> collect = actions.stream().collect(Collectors.groupingBy(Action::getOperation));
+            collect.forEach((operation, actionList) -> {
+                if (DefaultOperation.INSET.getOperation().equals(operation)) {
+                    likeService.saveLike(actionList);
+                }
+                if (DefaultOperation.DELETE.getOperation().equals(operation)) {
+                    likeService.saveLikeCancel(actionList);
+                }
+            });
+
+        } catch (Exception e) {
+            log.error("点赞消息消费失败", e);
+        } finally {
+            ack.acknowledge();
+            log.info("主题:#{}偏移量提交", LIKE_RECORD_TOPIC);
+        }
     }
 
     @KafkaListener(topics = "${mq.topic.chirper.like.count}",

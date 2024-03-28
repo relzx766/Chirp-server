@@ -6,6 +6,7 @@ import com.zyq.chirp.adviceserver.domain.enums.NoticeEntityTypeEnums;
 import com.zyq.chirp.adviceserver.domain.enums.NoticeEventTypeEnums;
 import com.zyq.chirp.adviceserver.domain.enums.NoticeStatusEnums;
 import com.zyq.chirp.adviceserver.domain.enums.NoticeTypeEnums;
+import com.zyq.chirp.adviceserver.service.NotificationService;
 import com.zyq.chirp.chirpclient.client.ChirperClient;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
 import jakarta.annotation.Resource;
@@ -20,6 +21,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,6 +51,8 @@ public class ChirperMessageAssembler {
     String replyTopic;
     @Value("${mq.topic.site-message.mentioned}")
     String mentionedTopic;
+    @Resource
+    NotificationService notificationService;
 
     @KafkaListener(topics = {"${mq.topic.site-message.like}", "${mq.topic.site-message.forward}",
             "${mq.topic.site-message.quote}", "${mq.topic.site-message.reply}", "${mq.topic.site-message.mentioned}"},
@@ -66,6 +70,7 @@ public class ChirperMessageAssembler {
                 if (response.getStatusCode().is2xxSuccessful()) {
                     Map<Long, ChirperDto> chirperDtoMap = Objects.requireNonNull(response.getBody())
                             .stream().collect(Collectors.toMap(ChirperDto::getId, Function.identity()));
+                    List<NotificationDto> notificationDtos = new ArrayList<>();
                     for (ConsumerRecord<String, NotificationDto> record : records) {
                         String topic = record.topic();
                         NotificationDto notificationDto = record.value();
@@ -93,13 +98,19 @@ public class ChirperMessageAssembler {
                         } else if (mentionedTopic.equalsIgnoreCase(topic)) {
                             notificationDto.setEvent(NoticeEventTypeEnums.MENTIONED.name());
                         }
-                        kafkaTemplate.send(notice, notificationDto);
+                        notificationDtos.add(notificationDto);
+                    }
+                    notificationDtos = notificationService.getSendable(notificationDtos);
+                    for (NotificationDto notificationDto : notificationDtos) {
+                        if (NoticeStatusEnums.UNREACHABLE.getStatus() != notificationDto.getStatus()) {
+                            kafkaTemplate.send(notice, notificationDto);
+                        }
                     }
                 } else if (response.getStatusCode().isError()) {
                     log.error("组装推文互动消息时获取推文信息错误，组装失败=>{}", response);
                 }
             }
-        } catch (NumberFormatException e) {
+        } catch (Exception e) {
             log.error("组装推文互动消息失败，错误=>", e);
         } finally {
             ack.acknowledge();

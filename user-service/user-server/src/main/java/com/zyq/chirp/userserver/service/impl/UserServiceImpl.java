@@ -13,7 +13,6 @@ import com.zyq.chirp.userserver.convertor.UserConvertor;
 import com.zyq.chirp.userserver.mapper.UserMapper;
 import com.zyq.chirp.userserver.model.enumeration.AccountStatus;
 import com.zyq.chirp.userserver.model.enumeration.RelationType;
-import com.zyq.chirp.userserver.model.pojo.Relation;
 import com.zyq.chirp.userserver.model.pojo.User;
 import com.zyq.chirp.userserver.service.RelationService;
 import com.zyq.chirp.userserver.service.UserService;
@@ -29,6 +28,8 @@ import org.springframework.util.CollectionUtils;
 
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -54,6 +55,7 @@ public class UserServiceImpl implements UserService {
         }
         LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(User::getId, userDto.getId());
+        Optional.ofNullable(userDto.getPassword()).ifPresent(password -> wrapper.set(User::getPassword, password));
         Optional.ofNullable(userDto.getNickname()).ifPresent(nickname -> wrapper.set(User::getNickname, nickname));
         Optional.ofNullable(userDto.getBirthday()).ifPresent(birthday -> wrapper.set(User::getBirthday, birthday));
         Optional.ofNullable(userDto.getGender()).ifPresent(gender -> wrapper.set(User::getGender, gender));
@@ -68,57 +70,62 @@ public class UserServiceImpl implements UserService {
         return true;
     }
 
-    /**
-     * 获取用户主页，包含用户基本信息和与当前用户的关系
-     *
-     * @param userId
-     * @param currentUserId 当前登录用户
-     * @return
-     */
-    @Override
-    @Cacheable(key = "'profile:'+#userId")
-    public UserDto getById(Long userId, Long currentUserId) {
-        if (Objects.isNull(userId)) {
-            throw new ChirpException(Code.ERR_BUSINESS, "对象用户为空");
-        }
-        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getId, userId));
-        UserDto userDto = userConvertor.pojoToDto(user);
-        userDto.clearPwd();
-        userDto.setFollowNum(Math.toIntExact(relationService.getFollowerCount(userId)));
-        userDto.setFollowingNum(Math.toIntExact(relationService.getFollowingCount(userId)));
-        if (currentUserId != null) {
-            userDto.setRelation(RelationType.UNFOLLOWED.getRelation());
-            Relation relation = relationService.getRelationType(currentUserId, userId);
-            if (relation != null) {
-                userDto.setRelation(relation.getStatus());
-            }
-        }
-        return userDto;
-    }
 
     @Override
     public List<UserDto> getByIds(Collection<Long> userIds, Long currentUserId) {
         if (CollectionUtils.isEmpty(userIds)) {
             throw new ChirpException(Code.ERR_BUSINESS, "对象用户为空");
         } else {
-            Map<Long, Integer> relation = new HashMap<>();
+            CountDownLatch latch = new CountDownLatch(3);
+            final Map<Long, Integer> relation = new HashMap<>();
+            final Map<Long, Integer> relationReverse = new HashMap<>();
             if (currentUserId != null) {
-                relation.putAll(relationService.getUserRelation(userIds, currentUserId).stream()
-                        .collect(Collectors.toMap(RelationDto::getToId, RelationDto::getStatus)));
+                Thread.ofVirtual().start(() -> {
+                    relation.putAll(relationService.getUserRelation(userIds, currentUserId).stream()
+                            .collect(Collectors.toMap(RelationDto::getToId, RelationDto::getStatus, (k1, k2) -> k1)));
+                    latch.countDown();
+                });
+                Thread.ofVirtual().start(() -> {
+                    relationReverse.putAll(relationService.getUserRelationReverse(userIds, currentUserId).stream()
+                            .collect(Collectors.toMap(RelationDto::getFromId, RelationDto::getStatus, (k1, k2) -> k1)));
+                    latch.countDown();
+                });
+            } else {
+                latch.countDown();
+                latch.countDown();
             }
-            return userMapper.selectList(new LambdaQueryWrapper<User>()
-                            .in(User::getId, userIds)
-                            .eq(User::getStatus, AccountStatus.ACTIVE.getStatus()))
-                    .stream()
-                    .map(user -> {
-                        UserDto userDto = userConvertor.pojoToDto(user);
-                        userDto.clearPwd();
-                        Integer status = relation.get(userDto.getId());
-                        status = status != null ? status : RelationType.UNFOLLOWED.getRelation();
-                        userDto.setRelation(status);
-                        return userDto;
-                    })
-                    .toList();
+            List<User> userList = new ArrayList<>();
+            Thread.ofVirtual().start(() -> {
+                userList.addAll(userMapper.selectList(new LambdaQueryWrapper<User>()
+                        .in(User::getId, userIds)
+                        .eq(User::getStatus, AccountStatus.ACTIVE.getStatus())));
+                latch.countDown();
+            });
+            boolean await;
+            try {
+                await = latch.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                log.error("", e);
+                throw new ChirpException(Code.ERR_SYSTEM, "线程中断");
+            }
+            if (await) {
+                return userList.stream()
+                        .map(user -> {
+                            UserDto userDto = userConvertor.pojoToDto(user);
+                            userDto.clearPwd();
+                            Integer relationStatus = relation.get(userDto.getId());
+                            relationStatus = RelationType.findWithDefault(relationStatus);
+                            userDto.setRelation(relationStatus);
+                            Integer relationReverseStatus = relationReverse.get(userDto.getId());
+                            relationReverseStatus = RelationType.findWithDefault(relationReverseStatus);
+                            userDto.setRelationReverse(relationReverseStatus);
+                            return userDto;
+                        }).toList();
+            } else {
+                log.warn("查询超时");
+                throw new ChirpException(Code.ERR_SYSTEM, "系统繁忙");
+            }
+
         }
     }
 
@@ -129,19 +136,8 @@ public class UserServiceImpl implements UserService {
         if (username == null || username.trim().isEmpty()) {
             throw new ChirpException(Code.ERR_BUSINESS, "未提供用户信息");
         }
-        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
-        UserDto userDto = userConvertor.pojoToDto(user);
-        userDto.clearPwd();
-        userDto.setFollowNum(Math.toIntExact(relationService.getFollowerCount(userDto.getId())));
-        userDto.setFollowingNum(Math.toIntExact(relationService.getFollowingCount(userDto.getId())));
-        if (currentUserId != null) {
-            userDto.setRelation(RelationType.UNFOLLOWED.getRelation());
-            Relation relation = relationService.getRelationType(currentUserId, userDto.getId());
-            if (relation != null) {
-                userDto.setRelation(relation.getStatus());
-            }
-        }
-        return userDto;
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().select(User::getId).eq(User::getUsername, username));
+        return getByIds(List.of(user.getId()), currentUserId).getFirst();
     }
 
     /**
@@ -208,38 +204,20 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public List<UserDto> search(String keyword, Long currentUserId, Integer page) {
-        Page<User> userPage = new Page<>(page, pageSize);
-        userPage.setSearchCount(false);
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        if (currentUserId != null) {
-            wrapper.ne(User::getId, currentUserId);
+        try {
+            Page<User> userPage = new Page<>(page, pageSize);
+            userPage.setSearchCount(false);
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.select(User::getId)
+                    .eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
+                    .and(queryWrapper -> queryWrapper.like(User::getNickname, keyword)
+                            .or()
+                            .like(User::getUsername, keyword));
+            List<Long> userIds = userMapper.selectPage(userPage, wrapper).getRecords().stream().map(User::getId).toList();
+            return getByIds(userIds, currentUserId);
+        } catch (Exception e) {
+            return List.of();
         }
-        wrapper.eq(User::getStatus, AccountStatus.ACTIVE.getStatus())
-                .and(queryWrapper -> queryWrapper.like(User::getNickname, keyword)
-                        .or()
-                        .like(User::getUsername, keyword));
-
-        List<UserDto> userDtos = userMapper.selectPage(userPage, wrapper
-                )
-                .getRecords()
-                .stream()
-                .map(user -> {
-                    UserDto userDto = userConvertor.pojoToDto(user);
-                    userDto.clearPwd();
-                    return userDto;
-                }).toList();
-        if (Objects.nonNull(currentUserId) && !userDtos.isEmpty()) {
-            List<Long> userIds = userDtos.stream().map(UserDto::getId).toList();
-            Map<Long, Integer> relationMap = relationService.getUserRelation(userIds, currentUserId)
-                    .stream()
-                    .collect(Collectors.toMap(RelationDto::getToId, RelationDto::getStatus, (k1, k2) -> k1));
-            userDtos.forEach(userDto -> {
-                Integer type = relationMap.get(userDto.getId());
-                type = type != null ? type : RelationType.UNFOLLOWED.getRelation();
-                userDto.setRelation(type);
-            });
-        }
-        return userDtos;
     }
 
     @Override
@@ -264,7 +242,7 @@ public class UserServiceImpl implements UserService {
         if (userIds == null || userIds.isEmpty() || targetId == null) {
             throw new ChirpException(Code.ERR_BUSINESS, "未提供完整的用户id信息");
         }
-        Map<Long, RelationDto> relationDtoMap = relationService.getUserRelationOfUser(userIds, targetId)
+        Map<Long, RelationDto> relationDtoMap = relationService.getUserRelationReverse(userIds, targetId)
                 .stream().collect(Collectors.toMap(RelationDto::getFromId, Function.identity(), (k1, k2) -> k1));
         return userMapper.selectList(new LambdaQueryWrapper<User>()
                         .select(User::getId, User::getUsername)
@@ -290,10 +268,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto save(UserDto userDto) {
-        if (isExistByUsername(userDto.getUsername())) {
+        if (isUnExist(userDto.getUsername())) {
             throw new ChirpException(Code.ERR_BUSINESS, "用户名已存在，请更换");
         }
-        if (isExistByEmail(userDto.getEmail())) {
+        if (isEmailExist(userDto.getEmail())) {
             throw new ChirpException(Code.ERR_BUSINESS, "邮箱已存在，请更换");
         }
         User user = userConvertor.dtoToPojo(userDto);
@@ -307,7 +285,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean isExistByUsername(String username) {
+    public boolean isUnExist(String username) {
         if (StringUtils.isBlank(username)) {
             throw new ChirpException(Code.ERR_BUSINESS, "请输入用户名");
         }
@@ -316,7 +294,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean isExistByEmail(String email) {
+    public boolean isEmailExist(String email) {
         if (StringUtils.isBlank(email)) {
             throw new ChirpException(Code.ERR_BUSINESS, "请输入邮箱");
         }

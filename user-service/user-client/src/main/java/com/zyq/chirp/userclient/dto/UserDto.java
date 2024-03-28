@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.Length;
@@ -17,6 +18,7 @@ import java.sql.Timestamp;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class UserDto implements Serializable {
     private static final long serialVersionUID = 123451111L;
     @JsonSerialize(using = ToStringSerializer.class)
@@ -44,7 +46,14 @@ public class UserDto implements Serializable {
     private Integer followNum;
     private Integer followingNum;
     private Integer status;
+    /**
+     * 我与对方的关系
+     */
     private Integer relation;
+    /**
+     * 对方与我的关系
+     */
+    private Integer relationReverse;
 
     public void clearPwd() {
         this.password = "";

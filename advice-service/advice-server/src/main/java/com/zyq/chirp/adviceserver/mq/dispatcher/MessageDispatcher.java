@@ -31,11 +31,11 @@ public class MessageDispatcher {
     AuthClient authClient;
     @Resource
     ObjectMapper objectMapper;
-
     @KafkaListener(topics = {"${mq.topic.site-message.notice}", "${mq.topic.site-message.tweeted-advice}"}, groupId = "${mq.consumer.group.site-message}",
             concurrency = "10", batch = "true")
     public void noticeDispatcher(@Payload List<ConsumerRecord<String, NotificationDto>> records, Acknowledgment ack) {
-        Map<String, List<NotificationDto>> messageMap = records.stream().collect(Collectors.groupingBy(record -> record.value().getReceiverId().toString(),
+        Map<String, List<NotificationDto>> messageMap = records.stream()
+                .collect(Collectors.groupingBy(record -> record.value().getReceiverId().toString(),
                 Collectors.mapping(ConsumerRecord::value, Collectors.toList())));
         Map<String, Boolean> onlineMap = authClient.multiCheck(messageMap.keySet()).getBody();
         if (onlineMap != null) {

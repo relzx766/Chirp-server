@@ -23,6 +23,7 @@
         <module>media-service</module>
         <module>feed-service</module>
         <module>chirp-common</module>
+        <module>community-service</module>
     </modules>
     <properties>
         <java.version>17</java.version>

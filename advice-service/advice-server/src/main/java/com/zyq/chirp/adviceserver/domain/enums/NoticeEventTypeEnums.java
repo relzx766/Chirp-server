@@ -34,6 +34,10 @@ public enum NoticeEventTypeEnums {
      */
     MENTIONED,
     /**
+     * 社群邀请
+     */
+    COMMUNITY_INVITATION,
+    /**
      * 公告
      */
     ANNOUNCEMENT,

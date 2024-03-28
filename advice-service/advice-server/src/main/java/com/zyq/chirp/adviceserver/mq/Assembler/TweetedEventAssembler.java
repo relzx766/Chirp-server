@@ -48,7 +48,7 @@ public class TweetedEventAssembler {
             Message<FeedDto> message = record.value();
             FeedDto feedDto = message.getBody();
             long userId = Long.parseLong(feedDto.getPublisher());
-            Long followerCount = userClient.getFollowerCount(userId).getBody();
+            Long followerCount = userClient.getFollowerCount(userId).getBody().getFollower();
             for (int i = 0; i < Math.ceilDiv(followerCount, querySize); i++) {
                 int finalI = i;
                 Thread.ofVirtual().start(() -> {

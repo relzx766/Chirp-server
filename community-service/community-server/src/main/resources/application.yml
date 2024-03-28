@@ -1,0 +1,90 @@
+spring:
+  application:
+    name: community-server
+  #nacos
+  cloud:
+    nacos:
+      server-addr: 192.168.31.14:8846,192.168.31.14:8847,192.168.31.14:8848
+  config:
+    import:
+      - optional:nacos:datasource-config.yml?group=COMMON_GROUP
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.31.14:3306/db_chirp?userUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
+    druid:
+      initial-size: 2
+      max-active: 8
+      min-idle: 1
+      max-wait: 6000
+      stat-view-servlet:
+        enabled: true
+        login-username: zyq
+        login-password: 123
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: '*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*'
+      db-type: mysql
+
+  data:
+    redis:
+      cluster:
+        nodes:
+          - 192.168.31.14:6379
+          - 192.168.31.14:6380
+          - 192.168.31.14:6381
+          - 192.168.31.14:6382
+          - 192.168.31.14:6383
+          - 192.168.31.14:6384
+        max-redirects: 3
+      password: 1234
+      timeout: 6000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1
+        cluster:
+          refresh:
+            adaptive: true
+            period: 30000
+  kafka:
+    bootstrap-servers: 192.168.31.14:19092
+    consumer:
+      group-id: community_consumer_group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.zyq.chirp.common.mq.*
+    producer:
+      # 发生错误后，消息重发的次数。
+      retries: 0
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      #只要集群的首领节点收到消息，生产者就会收到一个来自服务器成功响应。
+      acks: 1
+    listener:
+      #主题不存在时是否停止运行
+      missing-topics-fatal: false
+      ack-mode: manual
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+mq:
+  topic:
+    community:
+      invite: COMMUNITY_INVITE
+server:
+  port: 8087
+default-config:
+  page-size: 10
+
+sa-token:
+  token-name: Authorization
+

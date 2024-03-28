@@ -39,6 +39,7 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -50,7 +51,6 @@ public class ChatServiceImpl implements ChatService {
     ChatMapper messageMapper;
     @Resource
     ChatConvertor convertor;
-    private static final Map<String, RedisSubscribeListener> redisPSubMap = new HashMap<>();
     @Value("${default-config.page-size}")
     Integer pageSize;
     @Value("${mq.topic.site-message.chat}")
@@ -62,18 +62,9 @@ public class ChatServiceImpl implements ChatService {
     @Resource
     KafkaTemplate<String, Object> kafkaTemplate;
     @Resource
-    RedisMessageListenerContainer redisMessageListenerContainer;
-    @Resource
     ChatSettingService chatSettingService;
     @Resource
     UserClient userClient;
-    @Value("${mq.topic.socket-connect}")
-    private String connectTopic;
-    @Value("${mq.topic.site-message.user}")
-    private String messageTopic;
-    @Value("${mq.topic.socket-disconnect}")
-
-    private String disconnectTopic;
 
     @Override
     public void send(ChatDto chatDto) {
@@ -115,7 +106,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public Boolean canSendChat(Long sender, Long receiver) {
-        boolean check;
+        boolean check = false;
         if (sender.equals(receiver)) {
             check = true;
         } else {
@@ -129,16 +120,17 @@ public class ChatServiceImpl implements ChatService {
                 CountDownLatch latch = new CountDownLatch(rpcCount);
                 var ref = new Object() {
                     ChatSettingDto settingDto;
-                    RelationDto relationDto;
+                    RelationDto relationReverseDto;
+
                 };
                 Thread.ofVirtual().start(() -> {
-                    ResponseEntity<List<RelationDto>> relationRes = userClient.getRelationById(Set.of(receiver), sender);
+                    ResponseEntity<List<RelationDto>> relationRes = userClient.getRelationReverseById(Set.of(receiver), sender);
                     if (relationRes.getStatusCode().is2xxSuccessful()) {
                         List<RelationDto> relationDtos = relationRes.getBody();
                         if (relationDtos != null && !relationDtos.isEmpty()) {
-                            ref.relationDto = relationDtos.getFirst();
+                            ref.relationReverseDto = relationDtos.getFirst();
                         } else {
-                            ref.relationDto = RelationDto.unFollow(receiver, sender);
+                            ref.relationReverseDto = RelationDto.unFollow(receiver, sender);
                         }
                     }
                     latch.countDown();
@@ -148,9 +140,11 @@ public class ChatServiceImpl implements ChatService {
                     latch.countDown();
                 });
                 try {
-                    latch.await();
-                    check = ((ChatAllowEnum.EVERYONE.ordinal() == ref.settingDto.getAllow() && !ref.relationDto.getIsBlock())
-                            || ref.relationDto.getIsFollow()) && ref.settingDto.getChatReady();
+                    boolean await = latch.await(5, TimeUnit.SECONDS);
+                    if (await) {
+                        check = ((ChatAllowEnum.EVERYONE.ordinal() == ref.settingDto.getAllow() && !ref.relationReverseDto.getIsBlock())
+                                || ref.relationReverseDto.getIsFollow()) && ref.settingDto.getChatReady();
+                    }
                     Duration expire = Duration.ofSeconds(1);
                     operations.set(key, check, expire);
                 } catch (InterruptedException e) {
@@ -171,28 +165,6 @@ public class ChatServiceImpl implements ChatService {
         messageMapper.insert(chat);
     }
 
-    @Override
-    public void connect(Long userId, Session session) {
-        kafkaTemplate.send(connectTopic, userId);
-        if (redisPSubMap.containsKey(userId.toString())) {
-            redisPSubMap.get(userId.toString()).addSession(session);
-        } else {
-            RedisSubscribeListener subscribeListener = new RedisSubscribeListener(session);
-            redisPSubMap.put(userId.toString(), subscribeListener);
-            redisMessageListenerContainer.addMessageListener(subscribeListener, new ChannelTopic(messageTopic + userId));
-        }
-    }
-
-    @Override
-    public void disconnect(Long userId, Session session) {
-        kafkaTemplate.send(disconnectTopic, userId);
-        RedisSubscribeListener listener = redisPSubMap.get(userId.toString());
-        listener.removeSession(session.getId());
-        if (listener.getOpenSessionSize() <= 0) {
-            redisMessageListenerContainer.removeMessageListener(listener);
-            redisPSubMap.remove(userId.toString());
-        }
-    }
 
     @Override
     public void addBatch(Collection<ChatDto> chatDtos) {

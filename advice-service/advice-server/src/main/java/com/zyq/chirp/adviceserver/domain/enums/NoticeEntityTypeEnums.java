@@ -4,5 +4,6 @@ public enum NoticeEntityTypeEnums {
     CHIRPER,
     USER,
     TEXT,
-    MEDIA
+    MEDIA,
+    COMMUNITY_INVITATION,
 }

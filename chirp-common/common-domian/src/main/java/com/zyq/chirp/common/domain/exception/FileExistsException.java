@@ -1,5 +1,10 @@
 package com.zyq.chirp.common.domain.exception;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class FileExistsException extends RuntimeException {
     private Object data;
 
@@ -12,11 +17,4 @@ public class FileExistsException extends RuntimeException {
         this.data = data;
     }
 
-    public Object getData() {
-        return data;
-    }
-
-    public void setData(Object data) {
-        this.data = data;
-    }
 }

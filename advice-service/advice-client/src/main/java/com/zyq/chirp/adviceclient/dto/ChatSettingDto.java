@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -13,7 +15,7 @@ public class ChatSettingDto {
     Long id;
     Long userId;
     Integer allow = 1;
-    String pinned;
+    List<String> pinned;
     /**
      * 公钥上传前无法私聊
      */

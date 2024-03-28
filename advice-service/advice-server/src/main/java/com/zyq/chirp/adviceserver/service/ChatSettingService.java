@@ -3,6 +3,7 @@ package com.zyq.chirp.adviceserver.service;
 import com.zyq.chirp.adviceclient.dto.ChatSettingDto;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 public interface ChatSettingService {
@@ -16,5 +17,5 @@ public interface ChatSettingService {
 
     void updateAllow(Long userId, Integer allowEnum);
 
-    void updatePinned(Long userId, String conversationId);
+    void updatePinned(Long userId, List<String> conversations);
 }

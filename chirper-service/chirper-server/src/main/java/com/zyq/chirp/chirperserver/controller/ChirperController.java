@@ -3,6 +3,7 @@ package com.zyq.chirp.chirperserver.controller;
 import cn.dev33.satoken.stp.StpUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zyq.chirp.chirpclient.dto.ChirperDto;
+import com.zyq.chirp.chirpclient.dto.ChirperQueryDto;
 import com.zyq.chirp.chirperserver.domain.enums.ChirperType;
 import com.zyq.chirp.chirperserver.service.ChirperService;
 import jakarta.annotation.Nullable;
@@ -23,15 +24,9 @@ public class ChirperController {
     @Resource
     ObjectMapper objectMapper;
 
-    //    @ApiOperation(value = "发布推文", notes = "发布原创推文")
     @PostMapping("/add")
     public ResponseEntity<ChirperDto> addChirper(
-          /*  @ApiParam(value = "推文", required = true, example = """
-                    {
-                        "entity":"推文的内容",
-                        "mediaKeys":"媒体链接，json格式"
-                        text与mediaKeys有一个不为空
-                    }""")*/
+
             @RequestBody @Validated ChirperDto chirperDto) {
         chirperDto.setAuthorId(StpUtil.getLoginIdAsLong());
         return ResponseEntity.ok().body(chirperService.save(chirperDto));
@@ -43,45 +38,27 @@ public class ChirperController {
         return ResponseEntity.ok(chirperService.reply(chirperDto));
     }
 
-    //@ApiOperation(value = "转发推文", notes = "不修改源推文，仅做转发")
     @PostMapping("/forward")
-    public ResponseEntity forwardChirper(
-            // @ApiParam(value = "推文id", required = true, example = "123")
+    public ResponseEntity<Boolean> forwardChirper(
             @RequestParam("chirperId") Long chirperId) {
         chirperService.forward(chirperId, StpUtil.getLoginIdAsLong());
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(true);
     }
 
     @PostMapping("/forward/cancel")
-    public ResponseEntity cancelForward(@RequestParam("chirperId") Long chirperId) {
+    public ResponseEntity<Boolean> cancelForward(@RequestParam("chirperId") Long chirperId) {
         chirperService.cancelForward(chirperId, StpUtil.getLoginIdAsLong());
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(true);
     }
 
-    // @ApiOperation(value = "引用推文", notes = "需要加上自己的内容")
     @PostMapping("/quote")
     public ResponseEntity<ChirperDto> quoteChirper(
-/*            @ApiParam(value = "推文", required = true, example = """
-                    {
 
-                        "entity":"推文的内容",
-                        "mediaKeys":"媒体链接，json格式"
-                        "referencedChirperId":"引用的推文id"
-                        text与mediaKeys有一个不为空
-                    }""")*/
             @RequestBody @Validated(ChirperDto.Quote.class) ChirperDto chirperDto) {
         chirperDto.setAuthorId(StpUtil.getLoginIdAsLong());
         return ResponseEntity.ok(chirperService.quote(chirperDto));
     }
 
-    //@ApiOperation(value = "删除推文",notes = "用户仅能删除其自己的推文")
-/*    @DeleteMapping("/delete")
-    public ResponseEntity del(
-            //   @ApiParam(value = "推文id",required = true,example = "123")
-            @RequestParam("chirperId") Long chirperId) {
-        chirperService.delete(chirperId, StpUtil.getLoginIdAsLong());
-        return ResponseEntity.ok(null);
-    }*/
 
     //@ApiOperation(value = "推文详情")
     @GetMapping("/detail/{id}")
@@ -102,57 +79,17 @@ public class ChirperController {
         return ResponseEntity.ok(chirperDtos);
     }
 
-    @PostMapping("/page/{page}")
-    public ResponseEntity<List<ChirperDto>> getPage(@PathVariable("page") Integer page,
-                                                    @Nullable @RequestParam("chirperId") Long chirperId,
-                                                    @Nullable @RequestParam("userId") List<Long> userId,
-                                                    @Nullable @RequestParam("type") String type,
-                                                    @Nullable @RequestParam("media") Boolean media) {
-        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, userId, ChirperType.find(type), media, null);
+    @PostMapping("/page")
+    public ResponseEntity<List<ChirperDto>> getPage(@RequestBody ChirperQueryDto chirperQueryDto) {
         if (StpUtil.isLogin()) {
-            chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
+            chirperQueryDto.setCurrentUserId(StpUtil.getLoginIdAsLong());
+        }
+        List<ChirperDto> chirperDtos = chirperService.getPage(chirperQueryDto);
+        if (chirperQueryDto.getCurrentUserId() != null) {
+            chirperService.getInteractionInfo(chirperDtos, chirperQueryDto.getCurrentUserId());
         }
         return ResponseEntity.ok(chirperDtos);
     }
-
-    @PostMapping("/search")
-    public ResponseEntity<List<ChirperDto>> search(@RequestParam("keyword") String keyword,
-                                                   @RequestParam("page") Integer page,
-                                                   @RequestParam(value = "isMedia", defaultValue = "false") Boolean isMedia) {
-
-        List<ChirperDto> chirperDtos = chirperService.search(keyword, page, isMedia);
-        if (StpUtil.isLogin()) {
-            chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
-        }
-        return ResponseEntity.ok(chirperDtos);
-    }
-
-    @GetMapping("/child/{id}/{page}")
-    public ResponseEntity<List<ChirperDto>> getChildChirper(@PathVariable("id") Long chirperId,
-                                                            @PathVariable("page") Integer page,
-                                                            @Nullable @RequestParam("order") String order) {
-
-        List<ChirperDto> chirperDtos = chirperService.getPage(page, chirperId, null, null, null, order);
-        if (StpUtil.isLogin()) {
-            chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
-        }
-        return ResponseEntity.ok(chirperDtos);
-    }
-
-    @GetMapping("/author/{id}/{page}")
-    public ResponseEntity<List<ChirperDto>> getByAuthor(@PathVariable("id") Long authorId,
-                                                        @PathVariable("page") Integer page,
-                                                        @Nullable @RequestParam("type") String type,
-                                                        @Nullable @RequestParam("media") Boolean media) {
-
-
-        List<ChirperDto> chirperDtos = chirperService.getPage(page, null, List.of(authorId), ChirperType.find(type), media, null);
-        if (StpUtil.isLogin()) {
-            chirperService.getInteractionInfo(chirperDtos, StpUtil.getLoginIdAsLong());
-        }
-        return ResponseEntity.ok(chirperDtos);
-    }
-
     @GetMapping("/like/{id}/{page}")
     public ResponseEntity<List<ChirperDto>> getLikeRecord(@PathVariable("id") Long id,
                                                           @PathVariable("page") Integer page) {

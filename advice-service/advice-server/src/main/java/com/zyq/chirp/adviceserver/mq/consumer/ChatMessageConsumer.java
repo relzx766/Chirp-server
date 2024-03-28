@@ -21,12 +21,10 @@ public class ChatMessageConsumer {
             groupId = "${mq.consumer.group.chat}",
             batch = "true", concurrency = "4")
     public void receiver(@Payload List<ChatDto> messageDtos, Acknowledgment ack) {
-        log.info("消费到私信，开始写入数据库");
         try {
             messageService.addBatch(messageDtos);
-            log.info("写入完成");
         } catch (Exception e) {
-            log.warn("写入失败");
+            log.error("写入私信失败,错误=>", e);
         } finally {
             ack.acknowledge();
         }
